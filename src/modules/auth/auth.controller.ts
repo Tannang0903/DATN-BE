@@ -21,8 +21,8 @@ export class AuthController {
         password: { type: 'string' }
       },
       example: {
-        email: 'tannang09032002@gmail.com',
-        password: '12345678'
+        email: 'admin@gmail.com',
+        password: 'admin123'
       }
     }
   })

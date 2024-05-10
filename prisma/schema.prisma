@@ -103,7 +103,7 @@ model HomeRoom {
   name      String @unique
   facultyId String @map("faculty_id") @db.Uuid
 
-  faculties Faculty   @relation(fields: [facultyId], references: [id])
+  faculty   Faculty   @relation(fields: [facultyId], references: [id])
   students  Student[]
 }
 
