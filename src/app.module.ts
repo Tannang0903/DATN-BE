@@ -9,6 +9,8 @@ import { RoleModule } from './modules/roles'
 import { FacultyModule } from './modules/faculties'
 import { HomeRoomModule } from './modules/homerooms'
 import { EducationProgramModule } from './modules/education-programs'
+import { StudentModule } from '@modules/students'
+import { CloudinaryModule } from '@modules/cloudinary'
 
 @Module({
   imports: [
@@ -18,7 +20,9 @@ import { EducationProgramModule } from './modules/education-programs'
     RoleModule,
     FacultyModule,
     HomeRoomModule,
-    EducationProgramModule
+    EducationProgramModule,
+    StudentModule,
+    CloudinaryModule
   ],
   controllers: [AppController],
   providers: [

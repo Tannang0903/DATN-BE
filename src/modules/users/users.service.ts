@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
-import { CreateUserDto, GetUsersDto, UpdateUserDto } from './dto'
+import { CreateUserDto, UpdateUserDto } from './dto'
 import { PrismaService } from 'src/database'
-import { PaginatedResult, Pagination, RequestUser, compareHash, hashPassword } from 'src/common'
-import { Prisma, IdentityUser } from '@prisma/client'
+import { RequestUser, compareHash, hashPassword } from 'src/common'
 import { RoleService } from '../roles'
 
 @Injectable()
@@ -34,8 +33,17 @@ export class UserService {
   }
 
   getByEmail = async (email: string) => {
-    return await this.prisma.identityUser.findUnique({
-      where: { email: email },
+    return await this.prisma.identityUser.findFirst({
+      where: {
+        OR: [
+          {
+            email: email
+          },
+          {
+            username: email
+          }
+        ]
+      },
       select: {
         id: true,
         username: true,
@@ -74,59 +82,6 @@ export class UserService {
     })
   }
 
-  getAll = async (params: GetUsersDto): Promise<PaginatedResult<IdentityUser[]>> => {
-    const pageSize = params.pageSize ? params.pageSize : 10
-    const page = params.page ? params.page : 1
-
-    const whereConditions: Prisma.Enumerable<Prisma.IdentityUserWhereInput> = []
-    if (params.search) {
-      whereConditions.push({
-        OR: [
-          {
-            username: {
-              contains: params.search
-            }
-          },
-          {
-            email: {
-              contains: params.search
-            }
-          }
-        ]
-      })
-    }
-    const [total, users] = await Promise.all([
-      this.prisma.identityUser.count({
-        where: {
-          AND: whereConditions
-        }
-      }),
-      this.prisma.identityUser.findMany({
-        where: {
-          AND: whereConditions
-        },
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          roles: {
-            select: {
-              IdentityRole: {
-                select: {
-                  name: true
-                }
-              }
-            }
-          }
-        },
-        take: pageSize,
-        skip: Number((page - 1) * pageSize)
-      })
-    ])
-
-    return Pagination.of(page, pageSize, total, users)
-  }
-
   create = async (createUserDto: CreateUserDto) => {
     const { username, email, password, rolesId } = createUserDto
 
@@ -136,21 +91,21 @@ export class UserService {
       throw new BadRequestException('The roles provided are invalid')
     }
 
-    const userExists = await this.getByEmail(createUserDto.email)
+    const existedUser = await this.getByEmail(email)
 
-    if (userExists) {
+    if (existedUser) {
       throw new BadRequestException('User already exists')
     }
 
     const rolesToAdd = rolesData.length > 0 ? rolesData : await this.roleService.getDefaultRole()
 
-    const hash = await hashPassword(password)
+    const hashedPassword = await hashPassword(password)
 
     const user = await this.prisma.identityUser.create({
       data: {
         username: username,
         email: email,
-        hashedPassword: hash,
+        hashedPassword: hashedPassword,
         roles: {
           create: rolesToAdd.map((role) => ({
             roleId: role.id
@@ -174,7 +129,7 @@ export class UserService {
 
     return {
       ...user,
-      UserRoles: getRolesOfUser
+      roles: getRolesOfUser
     }
   }
 
@@ -215,7 +170,7 @@ export class UserService {
       throw new BadRequestException('User does not exist')
     }
 
-    return this.prisma.identityUser.delete({
+    return await this.prisma.identityUser.delete({
       where: { id }
     })
   }

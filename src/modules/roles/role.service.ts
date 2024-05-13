@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from 'src/database/services'
-import { CreateRoleDto, GetRolesDto } from './dto'
-import { Prisma } from '@prisma/client'
-import { Pagination } from 'src/common'
+import { CreateRoleDto } from './dto'
+import { IdentityRole } from '@prisma/client'
 import { UpdateRoleDto } from './dto/update-role.dto'
 
 @Injectable()
@@ -15,40 +14,8 @@ export class RoleService {
     })
   }
 
-  getAll = async (params: GetRolesDto) => {
-    const pageSize = params.pageSize ? params.pageSize : 10
-    const page = params.page ? params.page : 1
-
-    const whereConditions: Prisma.Enumerable<Prisma.IdentityRoleWhereInput> = []
-
-    if (params.search) {
-      whereConditions.push({
-        OR: [
-          {
-            name: {
-              contains: params.search
-            }
-          }
-        ]
-      })
-    }
-
-    const [total, roles] = await Promise.all([
-      this.prisma.identityRole.count({
-        where: {
-          AND: whereConditions
-        }
-      }),
-      this.prisma.identityRole.findMany({
-        where: {
-          AND: whereConditions
-        },
-        take: pageSize,
-        skip: Number((page - 1) * pageSize)
-      })
-    ])
-
-    return Pagination.of(page, pageSize, total, roles)
+  getAll = async (): Promise<IdentityRole[]> => {
+    return await this.prisma.identityRole.findMany()
   }
 
   create = async (createRoleDto: CreateRoleDto) => {
@@ -79,7 +46,9 @@ export class RoleService {
       throw new NotFoundException('The requested role does not exist.')
     }
 
-    if (!role.canBeUpdated) throw new BadRequestException('This role cannot be updated.')
+    if (!role.canBeUpdated) {
+      throw new BadRequestException('This role cannot be updated.')
+    }
 
     if (role.name !== name) {
       const existedRole = await this.prisma.identityRole.findFirst({
@@ -115,18 +84,16 @@ export class RoleService {
 
     return await this.prisma.$transaction(async (trx) => {
       await trx.userRole.deleteMany({ where: { roleId: id } })
-      await trx.identityRole.delete({ where: { id } })
+      await trx.identityRole.delete({ where: { id: id } })
     })
   }
 
   getDefaultRole = async () => {
-    const userRole = await this.prisma.identityRole.findMany({
+    return await this.prisma.identityRole.findMany({
       where: {
         name: 'STUDENT'
       }
     })
-
-    return userRole
   }
 
   checkRoles = async (roles: string[]) => {

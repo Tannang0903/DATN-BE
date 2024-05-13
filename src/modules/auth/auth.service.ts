@@ -74,13 +74,11 @@ export class AuthService {
 
   login = async (email: string, password: string) => {
     const user = await this.userService.getByEmail(email)
-
     if (!user) {
       throw new BadRequestException('User does not exist')
     }
 
     const passwordMatches = await compareHash(password, user.hashedPassword)
-
     if (!passwordMatches) {
       throw new BadRequestException('Password is incorrect')
     }
@@ -94,7 +92,6 @@ export class AuthService {
 
   sendForgotPasswordEmail = async (email: string) => {
     const user = await this.userService.getByEmail(email)
-
     if (!user) {
       throw new BadRequestException("The email doesn't exist in the system")
     }
@@ -131,7 +128,6 @@ export class AuthService {
     const { email, token, password } = resetPasswordDto
 
     const user = await this.userService.getByEmail(email)
-
     if (!user) {
       throw new BadRequestException("The email doesn't exist in the system")
     }

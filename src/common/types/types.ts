@@ -1,3 +1,5 @@
+import { UploadApiErrorResponse, UploadApiResponse } from 'cloudinary'
+
 export type JwtPayload = {
   sub: string
   username: string
@@ -8,4 +10,11 @@ export type RequestUser = {
   name: string
   session: string
   roles: string[]
+}
+
+export type CloudinaryResponse = UploadApiResponse | UploadApiErrorResponse
+
+export type Document = {
+  fileUrl: string
+  fileName: string
 }
