@@ -32,17 +32,40 @@ export class UserService {
     })
   }
 
-  getByEmail = async (email: string) => {
+  getByUserNameOrEmail = async (userNameOrEmail: string) => {
     return await this.prisma.identityUser.findFirst({
       where: {
         OR: [
           {
-            email: email
+            email: userNameOrEmail
           },
           {
-            username: email
+            username: userNameOrEmail
           }
         ]
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        hashedPassword: true,
+        roles: {
+          select: {
+            IdentityRole: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      }
+    })
+  }
+
+  getByEmail = async (email: string) => {
+    return await this.prisma.identityUser.findUnique({
+      where: {
+        email: email
       },
       select: {
         id: true,

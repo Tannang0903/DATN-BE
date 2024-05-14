@@ -7,20 +7,26 @@ import { ReqUser } from 'src/common/decorator'
 import { RequestUser } from 'src/common'
 
 @ApiTags('Auth')
-@Controller()
+@Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('login')
-  async login(@Body() loginCredentialDto: LoginCredentialDto) {
-    const { email, password } = loginCredentialDto
-    return await this.authService.login(email, password)
+  @Post('admin/login')
+  async adminLogin(@Body() loginCredentialDto: LoginCredentialDto) {
+    const { userNameOrEmail, password } = loginCredentialDto
+    return await this.authService.adminLogin(userNameOrEmail, password)
+  }
+
+  @Post('student/login')
+  async studentLogin(@Body() loginCredentialDto: LoginCredentialDto) {
+    const { userNameOrEmail, password } = loginCredentialDto
+    return await this.authService.studentLogin(userNameOrEmail, password)
   }
 
   @Post('forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    const { email } = forgotPasswordDto
-    return await this.authService.sendForgotPasswordEmail(email)
+    const { email, callBackUrl } = forgotPasswordDto
+    return await this.authService.sendForgotPasswordEmail(email, callBackUrl)
   }
 
   @Post('reset-password')

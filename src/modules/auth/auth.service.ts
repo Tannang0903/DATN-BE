@@ -72,15 +72,25 @@ export class AuthService {
     })
   }
 
-  login = async (email: string, password: string) => {
-    const user = await this.userService.getByEmail(email)
-    if (!user) {
-      throw new BadRequestException('User does not exist')
+  adminLogin = async (userNameOrEmail: string, password: string) => {
+    const user = await this.userService.getByUserNameOrEmail(userNameOrEmail)
+    const isValidRole = user.roles.some((role) => role.IdentityRole.name === 'ADMIN')
+
+    if (!user || !isValidRole) {
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
     }
 
     const passwordMatches = await compareHash(password, user.hashedPassword)
     if (!passwordMatches) {
-      throw new BadRequestException('Password is incorrect')
+      throw new BadRequestException({
+        message: 'Password is incorrect',
+        error: 'User:000002',
+        statusCode: 400
+      })
     }
 
     const tokens = await this.getTokens(user)
@@ -90,10 +100,42 @@ export class AuthService {
     return tokens
   }
 
-  sendForgotPasswordEmail = async (email: string) => {
+  studentLogin = async (userNameOrEmail: string, password: string) => {
+    const user = await this.userService.getByUserNameOrEmail(userNameOrEmail)
+    const isValidRole = user.roles.some((role) => role.IdentityRole.name !== 'ADMIN')
+
+    if (!user || !isValidRole) {
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
+    }
+
+    const passwordMatches = await compareHash(password, user.hashedPassword)
+    if (!passwordMatches) {
+      throw new BadRequestException({
+        message: 'Password is incorrect',
+        error: 'User:000002',
+        statusCode: 400
+      })
+    }
+
+    const tokens = await this.getTokens(user)
+
+    await this.updateRefreshToken(user.id, tokens.refreshToken)
+
+    return tokens
+  }
+
+  sendForgotPasswordEmail = async (email: string, callBackUrl: string) => {
     const user = await this.userService.getByEmail(email)
     if (!user) {
-      throw new BadRequestException("The email doesn't exist in the system")
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
     }
 
     const existedToken = await this.prisma.refreshToken.findFirst({
@@ -121,7 +163,7 @@ export class AuthService {
       })
     }
 
-    await this.mailService.sendResetPasswordToken(user.email, newToken.token)
+    await this.mailService.sendResetPasswordToken(user.email, newToken.token, callBackUrl)
   }
 
   resetPassword = async (resetPasswordDto: ResetPasswordDto) => {
@@ -129,7 +171,11 @@ export class AuthService {
 
     const user = await this.userService.getByEmail(email)
     if (!user) {
-      throw new BadRequestException("The email doesn't exist in the system")
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
     }
 
     const resetToken = await this.prisma.refreshToken.findFirst({
@@ -146,7 +192,11 @@ export class AuthService {
     })
 
     if (!resetToken || Date.now() > resetToken.expiresAt.getTime()) {
-      throw new BadRequestException('The token is invalid')
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'InvalidToken',
+        statusCode: 400
+      })
     }
 
     await this.prisma.$transaction(async (trx) => {
@@ -168,7 +218,11 @@ export class AuthService {
     const { oldPassword, newPassword } = changePasswordDto
 
     if (oldPassword === newPassword) {
-      throw new BadRequestException('You are input the same password')
+      throw new BadRequestException({
+        message: 'You are input the same password',
+        error: 'User:000003',
+        statusCode: 400
+      })
     }
 
     const user = await this.userService.getById(reqUser.id)
@@ -176,7 +230,11 @@ export class AuthService {
     const isOldPassword = await compareHash(oldPassword, user.hashedPassword)
 
     if (!isOldPassword) {
-      throw new BadRequestException('You have inputted a wrong password')
+      throw new BadRequestException({
+        message: 'You have inputted a wrong password',
+        error: 'User:000004',
+        statusCode: 400
+      })
     }
 
     const hashedPassword = await hashPassword(newPassword)
