@@ -1,15 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
-import {
-  IsBoolean,
-  IsEmail,
-  IsISO8601,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUrl,
-  IsUUID,
-  MaxLength
-} from 'class-validator'
+import { Gender } from '@prisma/client'
+import { IsEmail, IsEnum, IsISO8601, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID, MaxLength } from 'class-validator'
 
 export class CreateStudentDto {
   @ApiProperty({
@@ -32,11 +23,11 @@ export class CreateStudentDto {
 
   @ApiProperty({
     description: 'Example request gender for creating student',
-    example: true
+    example: Gender.MALE
   })
   @IsNotEmpty()
-  @IsBoolean()
-  gender: boolean
+  @IsEnum(Gender)
+  gender: Gender
 
   @ApiProperty({
     description: 'Example request birth for creating student',
@@ -91,6 +82,14 @@ export class CreateStudentDto {
   phone: string
 
   @ApiProperty({
+    description: 'Example request facultyId for creating student',
+    example: 'b6fde84e-5e94-4cc0-9240-6c1219d0c727'
+  })
+  @IsNotEmpty()
+  @IsUUID()
+  facultyId: string
+
+  @ApiProperty({
     description: 'Example request homeRoomId for creating student',
     example: 'a1641746-bd02-43c2-9774-91a5fe93d6bc'
   })
@@ -107,7 +106,8 @@ export class CreateStudentDto {
   educationProgramId: string
 
   @ApiProperty({
-    description: 'Example request image url for updating student'
+    description: 'Example request image url for updating student',
+    example: 'http://cb.dut.udn.vn/ImageSV/20/102200180.jpg'
   })
   @IsNotEmpty()
   @IsUrl()

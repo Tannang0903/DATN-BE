@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { AccessTokenGuard } from 'src/guard'
 import { StudentService } from './student.service'
@@ -41,5 +41,12 @@ export class StudentController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async updateStudent(@Param() { id }: UUIDParam, @Body() updateStudentDto: UpdateStudentDto) {
     return await this.studentService.update(id, updateStudentDto)
+  }
+
+  @Delete('students/:id')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeStudent(@Param() { id }: UUIDParam) {
+    return await this.studentService.delete(id)
   }
 }

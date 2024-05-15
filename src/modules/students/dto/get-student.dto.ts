@@ -1,8 +1,9 @@
 import { IsOrderQueryParam } from '@common/decorator'
-import { Transform, Type } from 'class-transformer'
-import { IsBoolean, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator'
+import { Type } from 'class-transformer'
+import { IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator'
 import { GetAllStudentsOrderByEnum } from '../student.enum'
 import { ApiPropertyOptional } from '@nestjs/swagger'
+import { Gender } from '@prisma/client'
 
 export class GetStudentsDto {
   @ApiPropertyOptional()
@@ -50,7 +51,6 @@ export class GetStudentsDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
-  @IsBoolean()
-  gender?: boolean
+  @IsEnum(Gender)
+  gender?: Gender
 }

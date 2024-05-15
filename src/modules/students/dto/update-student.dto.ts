@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { IsBoolean, IsEmail, IsISO8601, IsOptional, IsString, IsUrl, IsUUID, MaxLength } from 'class-validator'
+import { Gender } from '@prisma/client'
+import { IsEmail, IsEnum, IsISO8601, IsOptional, IsString, IsUrl, IsUUID, MaxLength } from 'class-validator'
 
 export class UpdateStudentDto {
   @ApiPropertyOptional({
@@ -22,11 +23,11 @@ export class UpdateStudentDto {
 
   @ApiPropertyOptional({
     description: 'Example request gender for updating student',
-    example: true
+    example: Gender.MALE
   })
   @IsOptional()
-  @IsBoolean()
-  gender?: boolean
+  @IsEnum(Gender)
+  gender: Gender
 
   @ApiPropertyOptional({
     description: 'Example request birth for updating student',
@@ -81,6 +82,14 @@ export class UpdateStudentDto {
   phone?: string
 
   @ApiPropertyOptional({
+    description: 'Example request facultyId for updating student',
+    example: 'b6fde84e-5e94-4cc0-9240-6c1219d0c727'
+  })
+  @IsOptional()
+  @IsUUID()
+  facultyId: string
+
+  @ApiPropertyOptional({
     description: 'Example request homeRoomId for updating student',
     example: 'a1641746-bd02-43c2-9774-91a5fe93d6bc'
   })
@@ -97,7 +106,8 @@ export class UpdateStudentDto {
   educationProgramId?: string
 
   @ApiPropertyOptional({
-    description: 'Example request image url for updating student'
+    description: 'Example request image url for updating student',
+    example: 'http://cb.dut.udn.vn/ImageSV/20/102200180.jpg'
   })
   @IsOptional()
   @IsUrl()

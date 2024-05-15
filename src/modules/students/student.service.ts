@@ -122,9 +122,9 @@ export class StudentService {
       })
     }
 
-    if (gender !== undefined) {
+    if (gender) {
       whereConditions.push({
-        gender: Boolean(gender)
+        gender: gender
       })
     }
 
@@ -139,6 +139,39 @@ export class StudentService {
       this.prisma.student.findMany({
         where: {
           AND: whereConditions
+        },
+        select: {
+          id: true,
+          code: true,
+          fullname: true,
+          gender: true,
+          birth: true,
+          hometown: true,
+          address: true,
+          imageUrl: true,
+          citizenId: true,
+          email: true,
+          phone: true,
+          identityId: true,
+          HomeRoom: {
+            select: {
+              id: true,
+              name: true,
+              facultyId: true
+            }
+          },
+          Faculty: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          EducationProgram: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
         },
         take: pageSize,
         skip: Number((page - 1) * pageSize),
@@ -160,6 +193,7 @@ export class StudentService {
       citizenId,
       email,
       phone,
+      facultyId,
       homeRoomId,
       educationProgramId,
       imageUrl
@@ -207,6 +241,7 @@ export class StudentService {
         citizenId,
         email,
         phone,
+        facultyId,
         homeRoomId,
         educationProgramId,
         identityId: user.id
@@ -227,6 +262,7 @@ export class StudentService {
       citizenId,
       email,
       phone,
+      facultyId,
       homeRoomId,
       educationProgramId,
       imageUrl
@@ -253,6 +289,7 @@ export class StudentService {
         citizenId,
         email,
         phone,
+        facultyId,
         homeRoomId,
         educationProgramId
       }
