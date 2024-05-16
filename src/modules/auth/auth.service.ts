@@ -193,7 +193,7 @@ export class AuthService {
 
     if (!resetToken || Date.now() > resetToken.expiresAt.getTime()) {
       throw new BadRequestException({
-        message: 'User does not exist',
+        message: 'Access token is still valid',
         error: 'InvalidToken',
         statusCode: 400
       })

@@ -9,9 +9,19 @@ export class RoleService {
   constructor(private readonly prisma: PrismaService) {}
 
   getById = async (id: string) => {
-    return await this.prisma.identityRole.findUniqueOrThrow({
+    const role = await this.prisma.identityRole.findUnique({
       where: { id }
     })
+
+    if (!role) {
+      throw new NotFoundException({
+        message: 'Role does not exists',
+        error: 'Role:000001',
+        statusCode: 400
+      })
+    }
+
+    return role
   }
 
   getAll = async (): Promise<IdentityRole[]> => {
@@ -26,7 +36,11 @@ export class RoleService {
     })
 
     if (existedRole) {
-      throw new BadRequestException('This role name has been used.')
+      throw new BadRequestException({
+        message: 'Role already exists',
+        error: 'Role:000002',
+        statusCode: 400
+      })
     }
 
     return await this.prisma.identityRole.create({
@@ -42,12 +56,12 @@ export class RoleService {
 
     const role = await this.getById(id)
 
-    if (!role) {
-      throw new NotFoundException('The requested role does not exist.')
-    }
-
     if (!role.canBeUpdated) {
-      throw new BadRequestException('This role cannot be updated.')
+      throw new BadRequestException({
+        message: 'This role cannot be updated',
+        error: 'Role:000003',
+        statusCode: 400
+      })
     }
 
     if (role.name !== name) {
@@ -57,7 +71,13 @@ export class RoleService {
         }
       })
 
-      if (existedRole) throw new BadRequestException('A role with given name already exists. Please try again.')
+      if (existedRole) {
+        throw new BadRequestException({
+          message: 'Role already exists',
+          error: 'Role:000002',
+          statusCode: 400
+        })
+      }
     }
 
     return await this.prisma.identityRole.update({
@@ -74,12 +94,12 @@ export class RoleService {
   delete = async (id: string) => {
     const role = await this.getById(id)
 
-    if (!role) {
-      throw new NotFoundException('The requested role does not exist.')
-    }
-
     if (!role.canBeDeleted) {
-      throw new BadRequestException('This role cannot be deleted.')
+      throw new BadRequestException({
+        message: 'This role cannot be deleted',
+        error: 'Role:000003',
+        statusCode: 400
+      })
     }
 
     return await this.prisma.$transaction(async (trx) => {

@@ -86,7 +86,7 @@ export class UserService {
   }
 
   getProfile = async (reqUser: RequestUser) => {
-    return await this.prisma.identityUser.findUnique({
+    const user = await this.prisma.identityUser.findUnique({
       where: { id: reqUser.id },
       select: {
         id: true,
@@ -103,6 +103,10 @@ export class UserService {
         }
       }
     })
+    return {
+      ...user,
+      roles: user.roles.map((_) => _.IdentityRole)
+    }
   }
 
   create = async (createUserDto: CreateUserDto) => {
