@@ -19,9 +19,19 @@ export class StudentService {
   ) {}
 
   getById = async (id: string) => {
-    return await this.prisma.student.findUnique({
+    const student = this.prisma.student.findUnique({
       where: { id: id }
     })
+
+    if (isEmpty(student)) {
+      throw new BadRequestException({
+        message: 'Student with given id does not exist',
+        error: 'Student:000001',
+        statusCode: 400
+      })
+    }
+
+    return student
   }
 
   getByCode = async (code: string) => {
@@ -69,7 +79,11 @@ export class StudentService {
       })
 
       if (isEmpty(homeRoom)) {
-        throw new NotFoundException('The home room does not exist')
+        throw new NotFoundException({
+          message: 'Home room with given id does not exist',
+          error: 'HomeRoom:000001',
+          statusCode: 400
+        })
       }
 
       whereConditions.push({
@@ -83,7 +97,11 @@ export class StudentService {
       })
 
       if (isEmpty(faculty)) {
-        throw new NotFoundException('The home room does not exist')
+        throw new NotFoundException({
+          message: 'Faculty with given id does not exist',
+          error: 'Faculty:000001',
+          statusCode: 400
+        })
       } else {
         const homeRooms = await this.prisma.homeRoom.findMany({
           where: {
@@ -94,17 +112,15 @@ export class StudentService {
           }
         })
 
-        if (isEmpty(homeRooms)) {
-          throw new NotFoundException('The home room does not exist')
+        if (homeRooms.length > 0) {
+          const homeRoomIds = homeRooms.map((homeRoom) => homeRoom.id)
+
+          whereConditions.push({
+            homeRoomId: {
+              in: homeRoomIds
+            }
+          })
         }
-
-        const homeRoomIds = homeRooms.map((homeRoom) => homeRoom.id)
-
-        whereConditions.push({
-          homeRoomId: {
-            in: homeRoomIds
-          }
-        })
       }
     }
 
@@ -114,7 +130,11 @@ export class StudentService {
       })
 
       if (isEmpty(program)) {
-        throw new NotFoundException('The home room does not exist')
+        throw new NotFoundException({
+          message: 'Education program with given id does not exist',
+          error: 'EducationProgram:000001',
+          statusCode: 400
+        })
       }
 
       whereConditions.push({
@@ -199,34 +219,52 @@ export class StudentService {
       imageUrl
     } = data
 
-    const validateDob = validateBirth(birth)
-
-    if (!validateDob) {
-      throw new BadRequestException('User must be more than 18 years old')
-    }
-
-    const existedEmail = await this.getByEmail(email)
-
-    if (isNotEmpty(existedEmail)) {
-      throw new BadRequestException('The username has already been used')
-    }
-
     const existedCode = await this.getByCode(code)
 
     if (isNotEmpty(existedCode)) {
-      throw new BadRequestException('The code has already been used')
+      throw new BadRequestException({
+        message: 'Student with the given code has already existed',
+        error: 'Student:000002',
+        statusCode: 400
+      })
     }
 
     const existedCitizenId = await this.getByCitizenId(citizenId)
 
     if (isNotEmpty(existedCitizenId)) {
-      throw new BadRequestException('The citizenId has already been used')
+      throw new BadRequestException({
+        message: 'Student with the given citizen identifier has already exist',
+        error: 'Student:000003',
+        statusCode: 400
+      })
+    }
+
+    const existedEmail = await this.getByEmail(email)
+
+    if (isNotEmpty(existedEmail)) {
+      throw new BadRequestException({
+        message: 'Student with the given email has already existed',
+        error: 'Student:000004',
+        statusCode: 400
+      })
+    }
+
+    const validateDob = validateBirth(birth)
+
+    if (!validateDob) {
+      throw new BadRequestException({
+        message: 'Student must be more than 18 years old',
+        error: 'Student:000005',
+        statusCode: 400
+      })
     }
 
     const user = await this.userService.create({
       username: code,
       email: email,
-      password: code
+      password: code,
+      fullname: fullname,
+      imageUrl: imageUrl
     })
 
     const student = await this.prisma.student.create({
@@ -268,11 +306,65 @@ export class StudentService {
       imageUrl
     } = data
 
-    const existedStudent = await this.getById(id)
+    const student = await this.getById(id)
 
-    if (isEmpty(existedStudent.id)) {
-      throw new BadRequestException('The student does not exist')
+    const isChangeCode = student.code !== code
+    if (isChangeCode) {
+      const existedCode = await this.getByCode(code)
+
+      if (isNotEmpty(existedCode)) {
+        throw new BadRequestException({
+          message: 'Student with the given code has already existed',
+          error: 'Student:000002',
+          statusCode: 400
+        })
+      }
     }
+
+    const isChangeCitizenId = student.citizenId !== citizenId
+    if (isChangeCitizenId) {
+      const existedCitizenId = await this.getByCitizenId(citizenId)
+
+      if (isNotEmpty(existedCitizenId)) {
+        throw new BadRequestException({
+          message: 'Student with the given citizen identifier has already exist',
+          error: 'Student:000003',
+          statusCode: 400
+        })
+      }
+    }
+
+    const isChangeEmail = student.email !== email
+    if (isChangeEmail) {
+      const existedEmail = await this.getByEmail(email)
+
+      if (isNotEmpty(existedEmail)) {
+        throw new BadRequestException({
+          message: 'Student with the given email has already existed',
+          error: 'Student:000004',
+          statusCode: 400
+        })
+      }
+    }
+
+    const validateDob = validateBirth(birth)
+
+    if (!validateDob) {
+      throw new BadRequestException({
+        message: 'Student must be more than 18 years old',
+        error: 'Student:000005',
+        statusCode: 400
+      })
+    }
+
+    const user = await this.userService.getByUserNameOrEmail(student.email)
+
+    await this.userService.update(user.id, {
+      username: code,
+      email: email,
+      fullname: fullname,
+      imageUrl: imageUrl
+    })
 
     return await this.prisma.student.update({
       where: {
@@ -297,11 +389,7 @@ export class StudentService {
   }
 
   delete = async (id: string) => {
-    const existedStudent = await this.getById(id)
-
-    if (!existedStudent) {
-      throw new BadRequestException('Student does not exist')
-    }
+    await this.getById(id)
 
     return await this.prisma.student.delete({
       where: { id }

@@ -19,7 +19,11 @@ export class HomeRoomService {
       })
 
       if (isEmpty(faculty)) {
-        throw new NotFoundException('The home room does not exist')
+        throw new NotFoundException({
+          message: 'Faculty with given id does not exist',
+          error: 'Faculty:000001',
+          statusCode: 400
+        })
       }
 
       whereConditions.push({

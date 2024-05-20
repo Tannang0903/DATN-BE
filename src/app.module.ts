@@ -11,6 +11,7 @@ import { HomeRoomModule } from './modules/homerooms'
 import { EducationProgramModule } from './modules/education-programs'
 import { StudentModule } from '@modules/students'
 import { CloudinaryModule } from '@modules/cloudinary'
+import { EventModule } from '@modules/events'
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { CloudinaryModule } from '@modules/cloudinary'
     HomeRoomModule,
     EducationProgramModule,
     StudentModule,
-    CloudinaryModule
+    CloudinaryModule,
+    EventModule
   ],
   controllers: [AppController],
   providers: [

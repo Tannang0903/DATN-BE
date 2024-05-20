@@ -18,3 +18,11 @@ export type Document = {
   fileUrl: string
   fileName: string
 }
+
+export type UserResponse = {
+  id: string
+  username: string
+  email: string
+  fullname: string
+  imageUrl: string
+}

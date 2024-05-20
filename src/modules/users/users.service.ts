@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { CreateUserDto, UpdateUserDto } from './dto'
 import { PrismaService } from 'src/database'
-import { RequestUser, compareHash, hashPassword } from 'src/common'
+import { RequestUser, hashPassword } from 'src/common'
 import { RoleService } from '../roles'
+import { isEmpty } from 'lodash'
 
 @Injectable()
 export class UserService {
@@ -12,13 +13,16 @@ export class UserService {
   ) {}
 
   getById = async (id: string) => {
-    return await this.prisma.identityUser.findUniqueOrThrow({
+    const user = await this.prisma.identityUser.findUnique({
       where: { id },
       select: {
         id: true,
         username: true,
         email: true,
+        fullname: true,
+        imageUrl: true,
         hashedPassword: true,
+        refreshToken: true,
         roles: {
           select: {
             IdentityRole: {
@@ -30,10 +34,20 @@ export class UserService {
         }
       }
     })
+
+    if (isEmpty(user)) {
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
+    }
+
+    return user
   }
 
   getByUserNameOrEmail = async (userNameOrEmail: string) => {
-    return await this.prisma.identityUser.findFirst({
+    const user = await this.prisma.identityUser.findFirst({
       where: {
         OR: [
           {
@@ -49,6 +63,8 @@ export class UserService {
         username: true,
         email: true,
         hashedPassword: true,
+        fullname: true,
+        imageUrl: true,
         roles: {
           select: {
             IdentityRole: {
@@ -60,10 +76,20 @@ export class UserService {
         }
       }
     })
+
+    if (isEmpty(user)) {
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
+    }
+
+    return user
   }
 
   getByEmail = async (email: string) => {
-    return await this.prisma.identityUser.findUnique({
+    const user = await this.prisma.identityUser.findUnique({
       where: {
         email: email
       },
@@ -83,15 +109,30 @@ export class UserService {
         }
       }
     })
+
+    if (isEmpty(user)) {
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
+    }
+
+    return user
   }
 
-  getProfile = async (reqUser: RequestUser) => {
-    const user = await this.prisma.identityUser.findUnique({
-      where: { id: reqUser.id },
+  getExistedUserByEmail = async (email: string) => {
+    const user = await this.prisma.identityUser.findFirst({
+      where: {
+        email: email
+      },
       select: {
         id: true,
         username: true,
         email: true,
+        hashedPassword: true,
+        fullname: true,
+        imageUrl: true,
         roles: {
           select: {
             IdentityRole: {
@@ -103,6 +144,45 @@ export class UserService {
         }
       }
     })
+
+    if (user) {
+      throw new BadRequestException({
+        message: 'User already exist',
+        error: 'User:000006',
+        statusCode: 400
+      })
+    }
+  }
+
+  getProfile = async (reqUser: RequestUser) => {
+    const user = await this.prisma.identityUser.findUnique({
+      where: { id: reqUser.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullname: true,
+        imageUrl: true,
+        roles: {
+          select: {
+            IdentityRole: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (isEmpty(user)) {
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
+    }
+
     return {
       ...user,
       roles: user.roles.map((_) => _.IdentityRole)
@@ -110,7 +190,7 @@ export class UserService {
   }
 
   create = async (createUserDto: CreateUserDto) => {
-    const { username, email, password, rolesId } = createUserDto
+    const { username, email, password, fullname, imageUrl, rolesId } = createUserDto
 
     const rolesData = await this.roleService.checkRoles(rolesId)
 
@@ -118,11 +198,7 @@ export class UserService {
       throw new BadRequestException('The roles provided are invalid')
     }
 
-    const existedUser = await this.getByEmail(email)
-
-    if (existedUser) {
-      throw new BadRequestException('User already exists')
-    }
+    await this.getExistedUserByEmail(email)
 
     const rolesToAdd = rolesData.length > 0 ? rolesData : await this.roleService.getDefaultRole()
 
@@ -133,6 +209,8 @@ export class UserService {
         username: username,
         email: email,
         hashedPassword: hashedPassword,
+        fullname: fullname,
+        imageUrl: imageUrl,
         roles: {
           create: rolesToAdd.map((role) => ({
             roleId: role.id
@@ -161,44 +239,27 @@ export class UserService {
   }
 
   update = async (id: string, updateUserDto: UpdateUserDto) => {
-    const { username, password } = updateUserDto
-
-    const existedUser = await this.prisma.identityUser.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        hashedPassword: true
-      }
-    })
-
-    if (!existedUser) {
-      throw new BadRequestException('The user does not exist')
-    }
-
-    if (password && compareHash(password, existedUser.hashedPassword)) {
-      throw new BadRequestException('The new password must be different from the current one')
-    }
+    const { username, email, fullname, imageUrl, refreshToken } = updateUserDto
 
     return await this.prisma.identityUser.update({
       where: {
         id
       },
       data: {
-        username,
-        hashedPassword: password ? await hashPassword(password) : undefined
+        username: username,
+        email: email,
+        fullname: fullname,
+        imageUrl: imageUrl,
+        refreshToken: refreshToken
       }
     })
   }
 
   delete = async (id: string) => {
-    const existedUser = await this.getById(id)
-
-    if (!existedUser) {
-      throw new BadRequestException('User does not exist')
-    }
+    await this.getById(id)
 
     return await this.prisma.identityUser.delete({
-      where: { id }
+      where: { id: id }
     })
   }
 }

@@ -1,10 +1,11 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { ChangePasswordDto, ForgotPasswordDto, LoginCredentialDto, ResetPasswordDto } from './dto'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
-import { AccessTokenGuard } from 'src/guard'
+import { AccessTokenGuard, RefreshTokenGuard } from 'src/guard'
 import { ReqUser } from 'src/common/decorator'
 import { RequestUser } from 'src/common'
+import { Request } from 'express'
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -39,5 +40,14 @@ export class AuthController {
   @ApiBearerAuth()
   async changePassword(@ReqUser() user: RequestUser, @Body() changePasswordDto: ChangePasswordDto) {
     return await this.authService.changePassword(user, changePasswordDto)
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(RefreshTokenGuard)
+  @Get('refresh-token')
+  refreshTokens(@Req() req: Request) {
+    const userId = req.user['id']
+    const refreshToken = req.user['refreshToken']
+    return this.authService.refreshTokens(userId, refreshToken)
   }
 }

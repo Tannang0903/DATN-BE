@@ -3,6 +3,7 @@ import { PrismaService } from 'src/database/services'
 import { CreateRoleDto } from './dto'
 import { IdentityRole } from '@prisma/client'
 import { UpdateRoleDto } from './dto/update-role.dto'
+import { isEmpty } from 'lodash'
 
 @Injectable()
 export class RoleService {
@@ -13,7 +14,7 @@ export class RoleService {
       where: { id }
     })
 
-    if (!role) {
+    if (isEmpty(role)) {
       throw new NotFoundException({
         message: 'Role does not exists',
         error: 'Role:000001',
@@ -97,7 +98,7 @@ export class RoleService {
     if (!role.canBeDeleted) {
       throw new BadRequestException({
         message: 'This role cannot be deleted',
-        error: 'Role:000003',
+        error: 'Role:000004',
         statusCode: 400
       })
     }

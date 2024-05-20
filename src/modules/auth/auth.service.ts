@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common'
 import { PrismaService } from 'src/database'
 import { UserService } from '../users/users.service'
 import { JwtService } from '@nestjs/jwt'
@@ -7,6 +7,7 @@ import { RequestUser, compareHash, hashPassword } from 'src/common'
 import { ResetPasswordDto, getUsersPayload } from './dto'
 import { MailService } from '../mail'
 import { ChangePasswordDto } from './dto/change-password.dto'
+import { isEmpty } from 'lodash'
 
 @Injectable()
 export class AuthService {
@@ -74,9 +75,9 @@ export class AuthService {
 
   adminLogin = async (userNameOrEmail: string, password: string) => {
     const user = await this.userService.getByUserNameOrEmail(userNameOrEmail)
-    const isValidRole = user.roles.some((role) => role.IdentityRole.name === 'ADMIN')
 
-    if (!user || !isValidRole) {
+    const isValidRole = user.roles.some((role) => role.IdentityRole.name === 'ADMIN')
+    if (!isValidRole) {
       throw new BadRequestException({
         message: 'User does not exist',
         error: 'User:000001',
@@ -102,9 +103,9 @@ export class AuthService {
 
   studentLogin = async (userNameOrEmail: string, password: string) => {
     const user = await this.userService.getByUserNameOrEmail(userNameOrEmail)
-    const isValidRole = user.roles.some((role) => role.IdentityRole.name !== 'ADMIN')
 
-    if (!user || !isValidRole) {
+    const isValidRole = user.roles.some((role) => role.IdentityRole.name !== 'ADMIN')
+    if (!isValidRole) {
       throw new BadRequestException({
         message: 'User does not exist',
         error: 'User:000001',
@@ -130,15 +131,8 @@ export class AuthService {
 
   sendForgotPasswordEmail = async (email: string, callBackUrl: string) => {
     const user = await this.userService.getByEmail(email)
-    if (!user) {
-      throw new BadRequestException({
-        message: 'User does not exist',
-        error: 'User:000001',
-        statusCode: 400
-      })
-    }
 
-    const existedToken = await this.prisma.refreshToken.findFirst({
+    const existedToken = await this.prisma.verificationToken.findFirst({
       where: {
         userId: user.id
       }
@@ -150,12 +144,12 @@ export class AuthService {
       userId: user.id
     }
 
-    if (!existedToken) {
-      await this.prisma.refreshToken.create({
+    if (isEmpty(existedToken)) {
+      await this.prisma.verificationToken.create({
         data: newToken
       })
     } else {
-      await this.prisma.refreshToken.update({
+      await this.prisma.verificationToken.update({
         where: {
           id: existedToken.id
         },
@@ -169,16 +163,9 @@ export class AuthService {
   resetPassword = async (resetPasswordDto: ResetPasswordDto) => {
     const { email, token, password } = resetPasswordDto
 
-    const user = await this.userService.getByEmail(email)
-    if (!user) {
-      throw new BadRequestException({
-        message: 'User does not exist',
-        error: 'User:000001',
-        statusCode: 400
-      })
-    }
+    await this.userService.getByEmail(email)
 
-    const resetToken = await this.prisma.refreshToken.findFirst({
+    const resetToken = await this.prisma.verificationToken.findFirst({
       where: {
         AND: [
           { token },
@@ -191,7 +178,7 @@ export class AuthService {
       }
     })
 
-    if (!resetToken || Date.now() > resetToken.expiresAt.getTime()) {
+    if (isEmpty(resetToken) || Date.now() > resetToken.expiresAt.getTime()) {
       throw new BadRequestException({
         message: 'Access token is still valid',
         error: 'InvalidToken',
@@ -208,7 +195,7 @@ export class AuthService {
           hashedPassword: await hashPassword(password)
         }
       })
-      await trx.refreshToken.delete({
+      await trx.verificationToken.delete({
         where: { id: resetToken.id }
       })
     })
@@ -247,5 +234,21 @@ export class AuthService {
         hashedPassword: hashedPassword
       }
     })
+  }
+
+  async refreshTokens(userId: string, refreshToken: string) {
+    const user = await this.userService.getById(userId)
+
+    if (!user || !user.refreshToken) throw new ForbiddenException('Access Denied')
+
+    const refreshTokenMatches = await compareHash(refreshToken, user.refreshToken)
+
+    if (!refreshTokenMatches) throw new ForbiddenException('Access Denied')
+
+    const tokens = await this.getTokens(user)
+
+    await this.updateRefreshToken(user.id, tokens.refreshToken)
+
+    return tokens
   }
 }

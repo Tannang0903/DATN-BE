@@ -1,4 +1,4 @@
-import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, Length } from 'class-validator'
+import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, IsUrl, Length } from 'class-validator'
 export class CreateUserDto {
   @IsNotEmpty()
   @IsString()
@@ -9,6 +9,15 @@ export class CreateUserDto {
   @IsEmail()
   @Length(5, 50, { message: 'The email length is wrong' })
   email: string
+
+  @IsNotEmpty()
+  @IsString()
+  @Length(5, 50, { message: 'The fullname length is wrong' })
+  fullname: string
+
+  @IsNotEmpty()
+  @IsUrl()
+  imageUrl: string
 
   @IsNotEmpty()
   @IsString()

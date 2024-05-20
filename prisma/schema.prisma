@@ -33,12 +33,15 @@ model IdentityUser {
   id             String @id(map: "pk_identity_user") @default(uuid()) @map("id") @db.Uuid
   username       String @db.VarChar(50)
   email          String @unique
+  fullname       String @db.VarChar(50)
+  imageUrl       String
   hashedPassword String
+  refreshToken   String?  @map("refresh_token")
 
   student                  Student?
   eventOrganizationContact EventOrganizationContact?
   roles                    UserRole[]
-  refreshTokens            RefreshToken[]
+  verificationTokens       VerificationToken[]
 }
 
 model IdentityRole {
@@ -53,7 +56,7 @@ model IdentityRole {
   users UserRole[]
 }
 
-model RefreshToken {
+model VerificationToken {
   id        String   @id(map: "pk_verification_token") @default(uuid()) @db.Uuid
   userId    String   @map("user_id") @db.Uuid
   token     String
@@ -62,6 +65,7 @@ model RefreshToken {
   expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
 
   IdentityUser IdentityUser @relation(fields: [userId], references: [id], onDelete: Cascade, map: "fk_verification_token_user")
+  @@map("VerificationToken")
 }
 
 model UserRole {
@@ -94,7 +98,7 @@ model Student {
   Faculty             Faculty               @relation(fields: [facultyId], references: [id])          
   HomeRoom            HomeRoom               @relation(fields: [homeRoomId], references: [id])
   EducationProgram    EducationProgram       @relation(fields: [educationProgramId], references: [id])
-  IdentityUsers        IdentityUser           @relation(fields: [identityId], references: [id])
+  IdentityUsers        IdentityUser           @relation(fields: [identityId], references: [id], onDelete: Cascade)
   studentEventRegister StudentEventRegister[]
 }
 
