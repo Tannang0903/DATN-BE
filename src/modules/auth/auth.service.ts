@@ -23,7 +23,7 @@ export class AuthService {
     const user = {
       username: userData.username,
       email: userData.email,
-      roles: userData.roles.map((role) => role.IdentityRole.name)
+      roles: userData.roles.map((role) => role.identityRole.name)
     }
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -76,7 +76,7 @@ export class AuthService {
   adminLogin = async (userNameOrEmail: string, password: string) => {
     const user = await this.userService.getByUserNameOrEmail(userNameOrEmail)
 
-    const isValidRole = user.roles.some((role) => role.IdentityRole.name === 'ADMIN')
+    const isValidRole = user.roles.some((role) => role.identityRole.name === 'ADMIN')
     if (!isValidRole) {
       throw new BadRequestException({
         message: 'User does not exist',
@@ -104,7 +104,7 @@ export class AuthService {
   studentLogin = async (userNameOrEmail: string, password: string) => {
     const user = await this.userService.getByUserNameOrEmail(userNameOrEmail)
 
-    const isValidRole = user.roles.some((role) => role.IdentityRole.name !== 'ADMIN')
+    const isValidRole = user.roles.some((role) => role.identityRole.name !== 'ADMIN')
     if (!isValidRole) {
       throw new BadRequestException({
         message: 'User does not exist',
@@ -170,7 +170,7 @@ export class AuthService {
         AND: [
           { token },
           {
-            IdentityUser: {
+            identityUser: {
               email: email
             }
           }

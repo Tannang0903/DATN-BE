@@ -25,7 +25,7 @@ export class UserService {
         refreshToken: true,
         roles: {
           select: {
-            IdentityRole: {
+            identityRole: {
               select: {
                 name: true
               }
@@ -67,7 +67,7 @@ export class UserService {
         imageUrl: true,
         roles: {
           select: {
-            IdentityRole: {
+            identityRole: {
               select: {
                 name: true
               }
@@ -100,7 +100,7 @@ export class UserService {
         hashedPassword: true,
         roles: {
           select: {
-            IdentityRole: {
+            identityRole: {
               select: {
                 name: true
               }
@@ -135,7 +135,7 @@ export class UserService {
         imageUrl: true,
         roles: {
           select: {
-            IdentityRole: {
+            identityRole: {
               select: {
                 name: true
               }
@@ -165,7 +165,7 @@ export class UserService {
         imageUrl: true,
         roles: {
           select: {
-            IdentityRole: {
+            identityRole: {
               select: {
                 name: true
               }
@@ -185,7 +185,7 @@ export class UserService {
 
     return {
       ...user,
-      roles: user.roles.map((_) => _.IdentityRole)
+      roles: user.roles.map((_) => _.identityRole)
     }
   }
 
@@ -224,7 +224,7 @@ export class UserService {
         userId: user.id
       },
       select: {
-        IdentityRole: {
+        identityRole: {
           select: {
             name: true
           }

@@ -5,12 +5,12 @@ import { AuthService } from './auth.service'
 import { UserModule } from '../users'
 import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport'
-import { AccessTokenStrategy } from 'src/strategy'
+import { AccessTokenStrategy, RefreshTokenStrategy } from 'src/strategy'
 import { MailModule } from '../mail'
 
 @Module({
   imports: [DatabaseModule, UserModule, JwtModule.register({}), PassportModule, MailModule],
   controllers: [AuthController],
-  providers: [AuthService, AccessTokenStrategy]
+  providers: [AuthService, AccessTokenStrategy, RefreshTokenStrategy]
 })
 export class AuthModule {}

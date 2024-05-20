@@ -29,6 +29,21 @@ enum ProofType {
   External
 }
 
+enum EventCategoryType {
+  Event
+  Individual
+}
+
+model UserRole {
+  userId String @map("user_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+
+  identityUser IdentityUser @relation(fields: [userId], references: [id], onDelete: Cascade, map: "fk_user_to_role_user")
+  identityRole IdentityRole @relation(fields: [roleId], references: [id], onDelete: Cascade, map: "fk_user_to_role_role")
+
+  @@id([userId, roleId])
+}
+
 model IdentityUser {
   id             String @id(map: "pk_identity_user") @default(uuid()) @map("id") @db.Uuid
   username       String @db.VarChar(50)
@@ -64,18 +79,8 @@ model VerificationToken {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
 
-  IdentityUser IdentityUser @relation(fields: [userId], references: [id], onDelete: Cascade, map: "fk_verification_token_user")
+  identityUser IdentityUser @relation(fields: [userId], references: [id], onDelete: Cascade, map: "fk_verification_token_user")
   @@map("VerificationToken")
-}
-
-model UserRole {
-  userId String @map("user_id") @db.Uuid
-  roleId String @map("role_id") @db.Uuid
-
-  IdentityUser IdentityUser @relation(fields: [userId], references: [id], onDelete: Cascade, map: "fk_user_to_role_user")
-  IdentityRole IdentityRole @relation(fields: [roleId], references: [id], onDelete: Cascade, map: "fk_user_to_role_role")
-
-  @@id([userId, roleId])
 }
 
 model Student {
@@ -95,11 +100,11 @@ model Student {
   educationProgramId String   @map("education_program_id") @db.Uuid
   identityId         String   @unique @map("identity_id") @db.Uuid
 
-  Faculty             Faculty               @relation(fields: [facultyId], references: [id])          
-  HomeRoom            HomeRoom               @relation(fields: [homeRoomId], references: [id])
-  EducationProgram    EducationProgram       @relation(fields: [educationProgramId], references: [id])
-  IdentityUsers        IdentityUser           @relation(fields: [identityId], references: [id], onDelete: Cascade)
-  studentEventRegister StudentEventRegister[]
+  faculty             Faculty               @relation(fields: [facultyId], references: [id])          
+  homeRoom            HomeRoom               @relation(fields: [homeRoomId], references: [id])
+  educationProgram    EducationProgram       @relation(fields: [educationProgramId], references: [id])
+  identityUser        IdentityUser           @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  studentEventRegister StudentEventRegister?
 }
 
 model Faculty {
@@ -128,6 +133,14 @@ model EducationProgram {
   students Student[]
 }
 
+model EventCategory {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @db.VarChar(128)
+  type EventCategoryType
+
+  eventActivities EventActivity[]
+}
+
 model EventActivity {
   id              String  @id @default(uuid()) @db.Uuid
   name            String  @db.VarChar(50)
@@ -135,17 +148,10 @@ model EventActivity {
   maxScore        Int     @db.Integer
   eventCategoryId String? @map("event_category_id") @db.Uuid
 
-  EventCategory EventCategory?  @relation(fields: [eventCategoryId], references: [id])
-  Events        Event[]
-  RequestEvent  RequestEvent[]
-  ExternalProof ExternalProof[]
-}
-
-model EventCategory {
-  id   String @id @default(uuid()) @db.Uuid
-  name String @db.VarChar(128)
-
-  Activities EventActivity[]
+  eventCategory EventCategory?  @relation(fields: [eventCategoryId], references: [id])
+  events        Event[]
+  requestEvents  RequestEvent[]
+  externalProofs ExternalProof[]
 }
 
 model EventAttendanceInfo {
@@ -155,8 +161,8 @@ model EventAttendanceInfo {
   endAt   DateTime @default(now()) @map("end_at") @db.Timestamptz(6)
   eventId String   @map("event_id") @db.Uuid
 
-  Event           Event             @relation(fields: [eventId], references: [id])
-  EventAttendance EventAttendance[]
+  event           Event             @relation(fields: [eventId], references: [id])
+  eventsAttendance EventAttendance[]
 }
 
 model EventRegistrationInfo {
@@ -165,7 +171,7 @@ model EventRegistrationInfo {
   endAt   DateTime @default(now()) @map("end_at") @db.Timestamptz(6)
   eventId String   @map("event_id") @db.Uuid
 
-  Event Event @relation(fields: [eventId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
 }
 
 model Event {
@@ -180,14 +186,14 @@ model Event {
   fullAddress     String         @db.VarChar(128)
   longtitude      Int            @db.Integer()
   latitude        Int            @db.Integer()
-  EventActivities EventActivity? @relation(fields: [eventActivityId], references: [id])
   eventActivityId String?        @map("event_activity_id") @db.Uuid
 
-  EventAttendanceInfos   EventAttendanceInfo[]
-  EventRegistrationInfos EventRegistrationInfo[]
-  EventRoles             EventRole[]
-  OrganizationInEvent    OrganizationInEvent[]
-  InternalProof          InternalProof[]
+  eventActivity          EventActivity? @relation(fields: [eventActivityId], references: [id])
+  eventAttendanceInfos   EventAttendanceInfo[]
+  eventRegistrationInfos EventRegistrationInfo[]
+  eventRoles             EventRole[]
+  organizationsInEvent   OrganizationInEvent[]
+  internalProofs          InternalProof[]
 }
 
 model EventRole {
@@ -199,9 +205,9 @@ model EventRole {
   isNeedApprove Boolean @db.Boolean()
   eventId       String  @map("event_id") @db.Uuid
 
-  Event                 Event                  @relation(fields: [eventId], references: [id])
-  StudentEventRegisters StudentEventRegister[]
-  InternalProof         InternalProof[]
+  event                 Event                  @relation(fields: [eventId], references: [id])
+  studentsEventRegister StudentEventRegister[]
+  internalProofs         InternalProof[]
 }
 
 model StudentEventRegister {
@@ -212,22 +218,22 @@ model StudentEventRegister {
   updatedAt    DateTime       @default(now()) @map("update_at") @db.Timestamptz(6)
   updatedBy    String
   rejectReason String?        @db.VarChar(250)
-  studentId    String         @map("student_id") @db.Uuid
+  studentId    String         @map("student_id") @db.Uuid @unique
   eventRoleId  String         @map("event_role_id") @db.Uuid
 
-  Student         Student           @relation(fields: [studentId], references: [id])
-  EventRole       EventRole         @relation(fields: [eventRoleId], references: [id])
-  EventAttendance EventAttendance[]
+  student         Student           @relation(fields: [studentId], references: [id])
+  eventRole       EventRole         @relation(fields: [eventRoleId], references: [id])
+  eventAttendance EventAttendance?
 }
 
 model EventAttendance {
   id                     String    @id @default(uuid()) @db.Uuid
-  eventAttendanceInfoId  String    @map("event_attendance_info_id") @db.Uuid
-  studentEventRegisterId String    @map("student_event_register_id") @db.Uuid
+  eventAttendanceInfoId  String    @map("event_attendance_info_id") @db.Uuid 
+  studentEventRegisterId String    @map("student_event_register_id") @db.Uuid @unique
   attendanceAt           DateTime? @default(now()) @map("attendance_at") @db.Timestamptz(6)
 
-  EventAttendanceInfo  EventAttendanceInfo  @relation(fields: [eventAttendanceInfoId], references: [id])
-  StudentEventRegister StudentEventRegister @relation(fields: [studentEventRegisterId], references: [id])
+  eventAttendanceInfo  EventAttendanceInfo  @relation(fields: [eventAttendanceInfoId], references: [id])
+  studentEventRegister StudentEventRegister @relation(fields: [studentEventRegisterId], references: [id])
 }
 
 model OrganizationInEvent {
@@ -236,9 +242,9 @@ model OrganizationInEvent {
   organizationId String @map("organization_id") @db.Uuid
   role           String @db.VarChar(250)
 
-  Event                  Event                    @relation(fields: [eventId], references: [id])
-  EventOrganization      EventOrganization        @relation(fields: [organizationId], references: [id])
-  OrganizationRepInEvent OrganizationRepInEvent[]
+  event                  Event                    @relation(fields: [eventId], references: [id])
+  eventOrganization      EventOrganization        @relation(fields: [organizationId], references: [id])
+  organizationRepsInEvent OrganizationRepInEvent[]
 }
 
 model OrganizationRepInEvent {
@@ -246,8 +252,8 @@ model OrganizationRepInEvent {
   organizationContactId String @map("organization_contact_id") @db.Uuid
   role                  String @db.VarChar(250)
 
-  OrganizationInEvent      OrganizationInEvent      @relation(fields: [organizationInEventId], references: [id])
-  EventOrganizationContact EventOrganizationContact @relation(fields: [organizationContactId], references: [id])
+  organizationInEvent      OrganizationInEvent      @relation(fields: [organizationInEventId], references: [id])
+  eventOrganizationContact EventOrganizationContact @relation(fields: [organizationContactId], references: [id])
 
   @@id([organizationInEventId, organizationContactId])
 }
@@ -261,8 +267,8 @@ model EventOrganization {
   address     String? @db.VarChar(128)
   imageUrl    String
 
-  OrganizationInEvent      OrganizationInEvent[]
-  EventOrganizationContact EventOrganizationContact[]
+  organizationsInEvent      OrganizationInEvent[]
+  eventOrganizationsContact EventOrganizationContact[]
 }
 
 model EventOrganizationContact {
@@ -275,12 +281,12 @@ model EventOrganizationContact {
   address     String?   @db.VarChar(128)
   imageUrl    String
   position    String?
-  organizerId String    @map("organizer_id") @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
   userId      String    @unique @map("identity_id") @db.Uuid
 
-  EventOrganization      EventOrganization        @relation(fields: [organizerId], references: [id])
-  IdentityUser           IdentityUser             @relation(fields: [userId], references: [id])
-  OrganizationRepInEvent OrganizationRepInEvent[]
+  eventOrganization      EventOrganization        @relation(fields: [organizationId], references: [id])
+  identityUser           IdentityUser             @relation(fields: [userId], references: [id])
+  organizationRepsInEvent OrganizationRepInEvent[]
 }
 
 model RequestEvent {
@@ -308,13 +314,7 @@ model RequestEvent {
   organizationContactPhone  String
   eventActivityId           String?   @map("event_activity_id") @db.Uuid
 
-  EventActivity EventActivity? @relation(fields: [eventActivityId], references: [id])
-}
-
-model Invitation {
-  code        String     @id
-  referenceId String?
-  type        ProofType?
+  eventActivity EventActivity? @relation(fields: [eventActivityId], references: [id])
 }
 
 model Proof {
@@ -335,7 +335,7 @@ model ExternalProof {
   role       String
   score      Float
 
-  EventActivity EventActivity @relation(fields: [activityId], references: [id])
+  eventActivity EventActivity @relation(fields: [activityId], references: [id])
 }
 
 model InternalProof {
@@ -343,6 +343,6 @@ model InternalProof {
   eventId String @map("event_id") @db.Uuid
   roleId  String @map("role_id") @db.Uuid
 
-  Event     Event     @relation(fields: [eventId], references: [id])
-  EventRole EventRole @relation(fields: [roleId], references: [id])
+  event     Event     @relation(fields: [eventId], references: [id])
+  eventRole EventRole @relation(fields: [roleId], references: [id])
 }

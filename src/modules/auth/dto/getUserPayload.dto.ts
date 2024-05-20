@@ -8,7 +8,7 @@ export type getUsersPayload = Prisma.IdentityUserGetPayload<{
     hashedPassword: true
     roles: {
       select: {
-        IdentityRole: {
+        identityRole: {
           select: {
             name: true
           }

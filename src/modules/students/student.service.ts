@@ -173,20 +173,20 @@ export class StudentService {
           email: true,
           phone: true,
           identityId: true,
-          HomeRoom: {
+          homeRoom: {
             select: {
               id: true,
               name: true,
               facultyId: true
             }
           },
-          Faculty: {
+          faculty: {
             select: {
               id: true,
               name: true
             }
           },
-          EducationProgram: {
+          educationProgram: {
             select: {
               id: true,
               name: true
