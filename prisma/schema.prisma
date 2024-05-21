@@ -135,7 +135,7 @@ model EducationProgram {
 
 model EventCategory {
   id   String @id @default(uuid()) @db.Uuid
-  name String @db.VarChar(128)
+  name String @db.Text
   type EventCategoryType
 
   eventActivities EventActivity[]
@@ -143,7 +143,7 @@ model EventCategory {
 
 model EventActivity {
   id              String  @id @default(uuid()) @db.Uuid
-  name            String  @db.VarChar(50)
+  name            String  @db.Text
   minScore        Int     @db.Integer
   maxScore        Int     @db.Integer
   eventCategoryId String? @map("event_category_id") @db.Uuid
@@ -189,17 +189,19 @@ model Event {
   eventActivityId String?        @map("event_activity_id") @db.Uuid
 
   eventActivity          EventActivity? @relation(fields: [eventActivityId], references: [id])
+  
   eventAttendanceInfos   EventAttendanceInfo[]
   eventRegistrationInfos EventRegistrationInfo[]
   eventRoles             EventRole[]
   organizationsInEvent   OrganizationInEvent[]
-  internalProofs          InternalProof[]
+
+  internalProofs         InternalProof[]
 }
 
 model EventRole {
   id            String  @id @default(uuid()) @db.Uuid
-  name          String  @db.VarChar(50)
-  description   String  @db.VarChar(250)
+  name          String  @db.VarChar(128)
+  description   String  @db.Text
   score         Int     @db.Integer()
   quantity      Int     @db.Integer()
   isNeedApprove Boolean @db.Boolean()
@@ -212,12 +214,12 @@ model EventRole {
 
 model StudentEventRegister {
   id           String         @id @default(uuid()) @db.Uuid
-  description  String         @db.VarChar(250)
+  description  String         @db.Text
   status       RegisterStatus
   registeredAt DateTime       @default(now()) @map("register_at") @db.Timestamptz(6)
   updatedAt    DateTime       @default(now()) @map("update_at") @db.Timestamptz(6)
   updatedBy    String
-  rejectReason String?        @db.VarChar(250)
+  rejectReason String?        @db.Text
   studentId    String         @map("student_id") @db.Uuid @unique
   eventRoleId  String         @map("event_role_id") @db.Uuid
 
@@ -327,13 +329,13 @@ model Proof {
 
 model ExternalProof {
   id         String   @id @db.Uuid
-  eventName  String
-  address    String
+  eventName  String   @db.VarChar(256)
+  address    String   @db.VarChar(128)
   startAt    DateTime @default(now()) @map("start_at") @db.Timestamptz(6)
   endAt      DateTime @default(now()) @map("end_at") @db.Timestamptz(6)
   activityId String   @map("activity_id") @db.Uuid
-  role       String
-  score      Float
+  role       String   @db.Text
+  score      Float    
 
   eventActivity EventActivity @relation(fields: [activityId], references: [id])
 }

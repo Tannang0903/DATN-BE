@@ -12,7 +12,7 @@ export class EducationProgramController {
 
   @Get('education-programs')
   @HttpCode(HttpStatus.OK)
-  async getAllFaculties() {
+  async getAllEducationPrograms() {
     return await this.educationProgramService.getAll()
   }
 }
