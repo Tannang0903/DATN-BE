@@ -14,6 +14,7 @@ import { CloudinaryModule } from '@modules/cloudinary'
 import { EventModule } from '@modules/events'
 import { EventCategoryModule } from '@modules/event-category'
 import { EventActivityModule } from '@modules/event-activity'
+import { EventOrganizationModule } from '@modules/event-organization'
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { EventActivityModule } from '@modules/event-activity'
     CloudinaryModule,
     EventModule,
     EventCategoryModule,
-    EventActivityModule
+    EventActivityModule,
+    EventOrganizationModule
   ],
   controllers: [AppController],
   providers: [

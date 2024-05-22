@@ -7,6 +7,10 @@ export class EducationProgramService {
   constructor(private readonly prisma: PrismaService) {}
 
   getAll = async (): Promise<EducationProgram[]> => {
-    return await this.prisma.educationProgram.findMany()
+    return await this.prisma.educationProgram.findMany({
+      orderBy: {
+        name: 'asc'
+      }
+    })
   }
 }

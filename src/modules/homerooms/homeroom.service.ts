@@ -36,6 +36,9 @@ export class HomeRoomService {
     return await this.prisma.homeRoom.findMany({
       where: {
         AND: whereConditions
+      },
+      orderBy: {
+        name: 'asc'
       }
     })
   }

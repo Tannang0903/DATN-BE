@@ -26,7 +26,11 @@ export class RoleService {
   }
 
   getAll = async (): Promise<IdentityRole[]> => {
-    return await this.prisma.identityRole.findMany()
+    return await this.prisma.identityRole.findMany({
+      orderBy: {
+        name: 'asc'
+      }
+    })
   }
 
   create = async (createRoleDto: CreateRoleDto) => {

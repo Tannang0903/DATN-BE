@@ -45,9 +45,9 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(RefreshTokenGuard)
   @Get('refresh-token')
-  refreshTokens(@Req() req: Request) {
+  async refreshTokens(@Req() req: Request) {
     const userId = req.user['id']
     const refreshToken = req.user['refreshToken']
-    return this.authService.refreshTokens(userId, refreshToken)
+    return await this.authService.refreshTokens(userId, refreshToken)
   }
 }

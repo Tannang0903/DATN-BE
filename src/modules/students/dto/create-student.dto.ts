@@ -106,7 +106,7 @@ export class CreateStudentDto {
   educationProgramId: string
 
   @ApiProperty({
-    description: 'Example request image url for updating student',
+    description: 'Example request image url for creating student',
     example: 'http://cb.dut.udn.vn/ImageSV/20/102200180.jpg'
   })
   @IsNotEmpty()

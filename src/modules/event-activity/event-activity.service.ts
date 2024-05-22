@@ -34,6 +34,9 @@ export class EventActivityService {
     return await this.prisma.eventActivity.findMany({
       where: {
         AND: whereConditions
+      },
+      orderBy: {
+        name: 'asc'
       }
     })
   }
@@ -54,6 +57,9 @@ export class EventActivityService {
     return await this.prisma.eventActivity.findMany({
       where: {
         AND: whereConditions
+      },
+      orderBy: {
+        name: 'asc'
       }
     })
   }

@@ -7,6 +7,10 @@ export class EventCategoryService {
   constructor(private readonly prisma: PrismaService) {}
 
   getAll = async (): Promise<EventCategory[]> => {
-    return await this.prisma.eventCategory.findMany()
+    return await this.prisma.eventCategory.findMany({
+      orderBy: {
+        name: 'asc'
+      }
+    })
   }
 }

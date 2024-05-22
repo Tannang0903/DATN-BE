@@ -1,6 +1,9 @@
 export enum GetAllStudentsOrderByEnum {
-  FULL_NAME = 'fullname',
   CODE = 'code',
-  EMAIL = 'email',
-  GENDER = 'gender'
+  FULL_NAME = 'fullname',
+  GENDER = 'gender',
+  BIRTH = 'birth',
+  HOMEROOM = 'homeRoom',
+  FACULTY = 'faculty',
+  EDUCATIONPROGRAM = 'educationProgram'
 }

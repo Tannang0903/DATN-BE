@@ -10,6 +10,7 @@ import { Prisma, Student } from '@prisma/client'
 import { getOrderBy, searchByMode } from '@common/utils'
 import { isEmpty } from 'lodash'
 import { UpdateStudentDto } from './dto/update-student.dto'
+import { GetAllStudentsOrderByEnum } from './student.enum'
 
 @Injectable()
 export class StudentService {
@@ -148,7 +149,13 @@ export class StudentService {
       })
     }
 
-    const orderBy = getOrderBy<Student>({ defaultValue: 'code', order: sorting })
+    const mappedOrder = {
+      [GetAllStudentsOrderByEnum.HOMEROOM]: 'homeRoom.name',
+      [GetAllStudentsOrderByEnum.FACULTY]: 'faculty.name',
+      [GetAllStudentsOrderByEnum.EDUCATIONPROGRAM]: 'educationProgram.name'
+    }
+
+    const orderBy = getOrderBy<Student>({ defaultValue: 'code', order: sorting, mappedOrder })
 
     const [total, students] = await Promise.all([
       this.prisma.student.count({
