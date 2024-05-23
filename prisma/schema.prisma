@@ -264,13 +264,13 @@ model EventOrganization {
   id          String  @id @default(uuid()) @db.Uuid
   name        String  @db.VarChar(50)
   description String? @db.VarChar(250)
-  email       String  @unique
+  email       String?  @unique
   phone       String  @db.VarChar(10)
   address     String? @db.VarChar(128)
   imageUrl    String
 
   organizationsInEvent      OrganizationInEvent[]
-  eventOrganizationsContact EventOrganizationContact[]
+  eventOrganizationContacts EventOrganizationContact[]
 }
 
 model EventOrganizationContact {
@@ -278,7 +278,7 @@ model EventOrganizationContact {
   name        String    @db.VarChar(50)
   gender      Gender
   birth       DateTime?
-  email       String    @unique
+  email       String?    @unique
   phone       String    @db.VarChar(10)
   address     String?   @db.VarChar(128)
   imageUrl    String
@@ -287,7 +287,7 @@ model EventOrganizationContact {
   userId      String    @unique @map("identity_id") @db.Uuid
 
   eventOrganization      EventOrganization        @relation(fields: [organizationId], references: [id])
-  identityUser           IdentityUser             @relation(fields: [userId], references: [id])
+  identityUser           IdentityUser             @relation(fields: [userId], references: [id],  onDelete: Cascade)
   organizationRepsInEvent OrganizationRepInEvent[]
 }
 

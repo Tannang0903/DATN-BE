@@ -2,12 +2,10 @@ import { PrismaService } from '@db'
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { isNotEmpty } from 'class-validator'
 import { isEmpty } from 'lodash'
-import { CreateEventOrganizationDto } from './dto'
-import { GetEventOrganizationsDto } from './dto/get-event-organization.dto'
+import { CreateEventOrganizationDto, GetEventOrganizationsDto, UpdateEventOrganizationDto } from './dto'
 import { EventOrganization, Prisma } from '@prisma/client'
 import { PaginatedResult, Pagination } from '@common/pagination'
 import { getOrderBy, searchByMode } from '@common/utils'
-import { UpdateEventOrganizationDto } from './dto/update-event-organization.dto'
 
 @Injectable()
 export class EventOrganizationService {
@@ -21,7 +19,30 @@ export class EventOrganizationService {
 
   getById = async (id: string) => {
     const eventOrganization = await this.prisma.eventOrganization.findUnique({
-      where: { id: id }
+      where: { id: id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        email: true,
+        phone: true,
+        address: true,
+        imageUrl: true,
+        eventOrganizationContacts: {
+          select: {
+            id: true,
+            name: true,
+            gender: true,
+            birth: true,
+            email: true,
+            phone: true,
+            address: true,
+            imageUrl: true,
+            position: true,
+            organizationId: true
+          }
+        }
+      }
     })
 
     if (isEmpty(eventOrganization)) {
@@ -75,7 +96,21 @@ export class EventOrganizationService {
           email: true,
           phone: true,
           address: true,
-          imageUrl: true
+          imageUrl: true,
+          eventOrganizationContacts: {
+            select: {
+              id: true,
+              name: true,
+              gender: true,
+              birth: true,
+              email: true,
+              phone: true,
+              address: true,
+              imageUrl: true,
+              position: true,
+              organizationId: true
+            }
+          }
         },
         take: pageSize,
         skip: Number((page - 1) * pageSize),
@@ -114,22 +149,7 @@ export class EventOrganizationService {
   }
 
   update = async (id: string, data: UpdateEventOrganizationDto) => {
-    const { name, description, email, phone, address, imageUrl } = data
-
-    const eventOrganization = await this.getById(id)
-
-    const isChangeEmail = eventOrganization.email !== email
-    if (isChangeEmail) {
-      const existedEmail = await this.getByEmail(email)
-
-      if (isNotEmpty(existedEmail)) {
-        throw new BadRequestException({
-          message: 'Event Organization with the given email has already existed',
-          error: 'EventOrganization:000002',
-          statusCode: 400
-        })
-      }
-    }
+    const { name, description, phone, address, imageUrl } = data
 
     return await this.prisma.eventOrganization.update({
       where: {
@@ -138,7 +158,6 @@ export class EventOrganizationService {
       data: {
         name,
         description,
-        email,
         phone,
         address,
         imageUrl

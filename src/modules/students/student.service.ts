@@ -396,10 +396,12 @@ export class StudentService {
   }
 
   delete = async (id: string) => {
-    await this.getById(id)
+    const student = await this.getById(id)
 
-    return await this.prisma.student.delete({
+    await this.prisma.student.delete({
       where: { id }
     })
+
+    await this.userService.delete(student.identityId)
   }
 }

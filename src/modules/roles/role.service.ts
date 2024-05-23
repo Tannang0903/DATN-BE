@@ -25,6 +25,22 @@ export class RoleService {
     return role
   }
 
+  getByName = async (name: string) => {
+    const role = await this.prisma.identityRole.findUnique({
+      where: { name }
+    })
+
+    if (isEmpty(role)) {
+      throw new NotFoundException({
+        message: 'Role does not exists',
+        error: 'Role:000001',
+        statusCode: 400
+      })
+    }
+
+    return role
+  }
+
   getAll = async (): Promise<IdentityRole[]> => {
     return await this.prisma.identityRole.findMany({
       orderBy: {

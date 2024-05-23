@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsEmail, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator'
+import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator'
 
 export class UpdateEventOrganizationDto {
   @ApiProperty({
@@ -19,14 +19,6 @@ export class UpdateEventOrganizationDto {
   @IsString()
   @MaxLength(250)
   description?: string
-
-  @ApiProperty({
-    description: 'Example request email for updating event organization',
-    example: 'tannang09032002@gmail.com'
-  })
-  @IsOptional()
-  @IsEmail()
-  email?: string
 
   @ApiProperty({
     description: 'Example request phone for updating event organization',
