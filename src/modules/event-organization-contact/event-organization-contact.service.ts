@@ -81,7 +81,7 @@ export class EventOrganizationContactService {
           phone: true,
           position: true,
           address: true,
-          organizationId: true
+          eventOrganizationId: true
         },
         take: pageSize,
         skip: Number((page - 1) * pageSize)
@@ -136,9 +136,9 @@ export class EventOrganizationContactService {
         imageUrl,
         birth: new Date(birth),
         gender,
-        organizationId: id,
+        eventOrganizationId: id,
         position,
-        userId: user.id
+        identityId: user.id
       }
     })
 
@@ -173,7 +173,7 @@ export class EventOrganizationContactService {
         imageUrl,
         birth: new Date(birth),
         gender,
-        organizationId: id,
+        eventOrganizationId: id,
         position
       }
     })
@@ -193,6 +193,6 @@ export class EventOrganizationContactService {
       }
     })
 
-    await this.userService.delete(contact.userId)
+    await this.userService.delete(contact.identityId)
   }
 }

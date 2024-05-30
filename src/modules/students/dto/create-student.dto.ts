@@ -18,7 +18,7 @@ export class CreateStudentDto {
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(50)
+  @MaxLength(64)
   fullname: string
 
   @ApiProperty({
@@ -43,7 +43,7 @@ export class CreateStudentDto {
   })
   @IsOptional()
   @IsString()
-  @MaxLength(128)
+  @MaxLength(256)
   hometown?: string
 
   @ApiProperty({
@@ -52,7 +52,7 @@ export class CreateStudentDto {
   })
   @IsOptional()
   @IsString()
-  @MaxLength(128)
+  @MaxLength(256)
   address?: string
 
   @ApiProperty({

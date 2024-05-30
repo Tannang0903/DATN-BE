@@ -6,10 +6,16 @@ import { CreateEventOrganizationDto, GetEventOrganizationsDto, UpdateEventOrgani
 import { EventOrganization, Prisma } from '@prisma/client'
 import { PaginatedResult, Pagination } from '@common/pagination'
 import { getOrderBy, searchByMode } from '@common/utils'
+import { UserService } from '@modules/users'
+import { RoleService } from '@modules/roles'
 
 @Injectable()
 export class EventOrganizationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userService: UserService,
+    private readonly roleService: RoleService
+  ) {}
 
   getByEmail = async (email: string) => {
     return await this.prisma.eventOrganization.findUnique({
@@ -28,6 +34,7 @@ export class EventOrganizationService {
         phone: true,
         address: true,
         imageUrl: true,
+        identityId: true,
         eventOrganizationContacts: {
           select: {
             id: true,
@@ -39,7 +46,7 @@ export class EventOrganizationService {
             address: true,
             imageUrl: true,
             position: true,
-            organizationId: true
+            eventOrganizationId: true
           }
         }
       }
@@ -108,7 +115,7 @@ export class EventOrganizationService {
               address: true,
               imageUrl: true,
               position: true,
-              organizationId: true
+              eventOrganizationId: true
             }
           }
         },
@@ -134,6 +141,17 @@ export class EventOrganizationService {
       })
     }
 
+    const role = await this.roleService.getByName('ORGANIZATION')
+
+    const user = await this.userService.create({
+      username: email,
+      email: email,
+      password: phone,
+      fullname: name,
+      imageUrl: imageUrl,
+      rolesId: [role.id]
+    })
+
     const eventOrganization = await this.prisma.eventOrganization.create({
       data: {
         name,
@@ -141,7 +159,8 @@ export class EventOrganizationService {
         email,
         phone,
         address,
-        imageUrl
+        imageUrl,
+        identityId: user.id
       }
     })
 
@@ -166,10 +185,12 @@ export class EventOrganizationService {
   }
 
   delete = async (id: string) => {
-    await this.getById(id)
+    const organization = await this.getById(id)
 
-    return await this.prisma.eventOrganization.delete({
+    await this.prisma.eventOrganization.delete({
       where: { id }
     })
+
+    await this.userService.delete(organization.identityId)
   }
 }

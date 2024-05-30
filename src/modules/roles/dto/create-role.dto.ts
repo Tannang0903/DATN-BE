@@ -8,7 +8,7 @@ export class CreateRoleDto {
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(50)
+  @MaxLength(64)
   name: string
 
   @ApiProperty({

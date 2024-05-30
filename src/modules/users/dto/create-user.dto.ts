@@ -1,29 +1,50 @@
-import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, IsUrl, Length } from 'class-validator'
+import { ApiProperty } from '@nestjs/swagger'
+import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator'
 export class CreateUserDto {
+  @ApiProperty({
+    description: 'Example request username for creating user',
+    example: 'admin'
+  })
   @IsNotEmpty()
   @IsString()
-  @Length(5, 50, { message: 'The username length is wrong' })
   username: string
 
+  @ApiProperty({
+    description: 'Example request username for creating user',
+    example: 'admin@gmail.com'
+  })
   @IsNotEmpty()
   @IsEmail()
-  @Length(5, 50, { message: 'The email length is wrong' })
   email: string
 
+  @ApiProperty({
+    description: 'Example request full name for creating user',
+    example: 'admin@gmail.com'
+  })
   @IsNotEmpty()
   @IsString()
-  @Length(5, 50, { message: 'The fullname length is wrong' })
   fullname: string
 
+  @ApiProperty({
+    description: 'Example request image url for creating user',
+    example: 'http://cb.dut.udn.vn/ImageSV/20/102200180.jpg'
+  })
   @IsNotEmpty()
   @IsUrl()
   imageUrl: string
 
+  @ApiProperty({
+    description: 'Example request password for creating user',
+    example: 'admin123'
+  })
   @IsNotEmpty()
   @IsString()
-  @Length(5, 50, { message: 'The password length is wrong' })
   password: string
 
+  @ApiProperty({
+    description: 'Example request roles Id for creating user',
+    example: ['d2b3b40e-4c7e-44e4-a8ea-7030de198615']
+  })
   @IsOptional()
   @IsArray()
   rolesId?: string[]
