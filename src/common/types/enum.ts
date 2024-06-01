@@ -3,3 +3,8 @@ export enum UserRole {
   STUDENT = 'STUDENT',
   ORGANIZATION = 'ORGANIZATION'
 }
+
+export enum AdminRole {
+  ADMIN = 'ADMIN',
+  ORGANIZATION = 'ORGANIZATION'
+}

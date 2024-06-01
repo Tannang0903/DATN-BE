@@ -1,8 +1,9 @@
-import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, HttpCode, HttpStatus, Param, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { AccessTokenGuard } from 'src/guard'
 import { EventActivityService } from './event-activity.service'
-import { GetEventActivitiesByCategoryIdDto, GetEventActivitiesDto } from './dto'
+import { GetEventActivitiesDto } from './dto'
+import { UUIDParam } from '@common/types'
 
 @Controller()
 @ApiTags('EventActivity')
@@ -13,8 +14,8 @@ export class EventActivityController {
 
   @Get('event-categories/:id/activities')
   @HttpCode(HttpStatus.OK)
-  async getAllEventActivitiesByCategoryId(@Query() params: GetEventActivitiesByCategoryIdDto) {
-    return await this.eventActivityService.getByCategoryId(params)
+  async getAllEventActivitiesByCategoryId(@Param() { id }: UUIDParam) {
+    return await this.eventActivityService.getByCategoryId(id)
   }
 
   @Get('event-activities')

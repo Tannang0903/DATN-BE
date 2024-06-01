@@ -1,18 +1,19 @@
 import { PrismaService } from '@db'
 import { BadRequestException, Injectable } from '@nestjs/common'
-import { CreateEventDto, GetEventsDto } from './dto'
 import { Event, EventAttendanceInfo, EventRegistrationInfo, EventStatus, Prisma, RegisterStatus } from '@prisma/client'
 import { getOrderBy, searchByMode } from '@common/utils'
 import { Pagination } from '@common/pagination'
 import { isEmpty } from 'lodash'
 import { RequestUser, UserRole } from '@common/types'
+import { UpdateEventDto } from './dto/update-event.dto'
+import { CreateEventDto, GetEventsDto } from './dto'
 
 @Injectable()
 export class EventService {
   constructor(private readonly prisma: PrismaService) {}
 
   getAll = async (params: GetEventsDto) => {
-    const { search, sorting } = params
+    const { startDate, endDate, eventType, eventStatus, search, sorting } = params
 
     const pageSize = params.pageSize ? params.pageSize : 10
     const page = params.page ? params.page : 1
@@ -24,6 +25,39 @@ export class EventService {
         OR: [
           {
             name: searchByMode(search)
+          }
+        ]
+      })
+    }
+
+    if (eventType) {
+      whereConditions.push({
+        type: eventType
+      })
+    }
+
+    if (eventStatus) {
+      whereConditions.push({
+        status: eventStatus
+      })
+    }
+
+    if (startDate && !endDate) {
+      whereConditions.push({
+        startAt: startDate
+      })
+    } else if (!startDate && endDate) {
+      whereConditions.push({
+        endAt: endDate
+      })
+    } else if (startDate && endDate) {
+      whereConditions.push({
+        AND: [
+          {
+            startAt: startDate
+          },
+          {
+            endAt: endDate
           }
         ]
       })
@@ -183,6 +217,7 @@ export class EventService {
         status: true,
         organizationsInEvent: {
           select: {
+            role: true,
             eventOrganization: {
               select: {
                 id: true,
@@ -192,20 +227,13 @@ export class EventService {
                 phone: true,
                 address: true,
                 imageUrl: true,
-                createdAt: true,
-                eventOrganizationContacts: {
-                  select: {
-                    id: true,
-                    name: true,
-                    gender: true,
-                    birth: true,
-                    email: true,
-                    phone: true,
-                    address: true,
-                    imageUrl: true,
-                    position: true
-                  }
-                }
+                createdAt: true
+              }
+            },
+            organizationRepresentativesInEvent: {
+              select: {
+                role: true,
+                eventOrganizationContact: true
               }
             }
           }
@@ -286,7 +314,7 @@ export class EventService {
       id: event.id,
       name: event.name,
       introduction: event.introduction,
-      description: event.introduction,
+      description: event.description,
       imageUrl: event.imageUrl,
       startAt: event.startAt,
       endAt: event.endAt,
@@ -351,17 +379,19 @@ export class EventService {
           address: item.eventOrganization.address,
           imageUrl: item.eventOrganization.imageUrl,
           createAt: item.eventOrganization.createdAt,
-          eventOrganizationContacts: item.eventOrganization.eventOrganizationContacts.map((contact) => {
+          role: item.role,
+          eventOrganizationContacts: item.organizationRepresentativesInEvent.map((contact) => {
             return {
-              id: contact.id,
-              name: contact.name,
-              gender: contact.gender,
-              birth: contact.birth,
-              email: contact.email,
-              phone: contact.phone,
-              address: contact.address,
-              imageUrl: contact.imageUrl,
-              position: contact.position
+              id: contact.eventOrganizationContact.id,
+              name: contact.eventOrganizationContact.name,
+              gender: contact.eventOrganizationContact.gender,
+              birth: contact.eventOrganizationContact.birth,
+              email: contact.eventOrganizationContact.email,
+              phone: contact.eventOrganizationContact.phone,
+              address: contact.eventOrganizationContact.address,
+              imageUrl: contact.eventOrganizationContact.imageUrl,
+              position: contact.eventOrganizationContact.position,
+              role: contact.role
             }
           })
         }
@@ -506,7 +536,174 @@ export class EventService {
           }
         }
       })
+
+      return event
     })
+  }
+
+  update = async (id: string, user: RequestUser, data: UpdateEventDto) => {
+    const {
+      name,
+      introduction,
+      description,
+      imageUrl,
+      startAt,
+      endAt,
+      type,
+      address,
+      eventActivityId,
+      eventAttendanceInfos,
+      eventRegistrationInfos,
+      eventRoles,
+      organizationsInEvent,
+      organizationRepresentativeId
+    } = data
+
+    const event = await this.getById(id)
+
+    return await this.prisma.$transaction(async (trx) => {
+      const updateEvent = await trx.event.update({
+        where: { id },
+        data: {
+          name,
+          introduction,
+          description,
+          imageUrl,
+          startAt: new Date(startAt).toISOString(),
+          endAt: new Date(endAt).toISOString(),
+          type,
+          fullAddress: address.fullAddress,
+          longitude: Number(address.longitude),
+          latitude: Number(address.latitude),
+          eventActivityId,
+          status: user.roles.includes(UserRole.ADMIN) ? EventStatus.Approved : EventStatus.Pending
+        }
+      })
+
+      await trx.eventAttendanceInfo.deleteMany({ where: { eventId: event.id } })
+      const createEventAttendancePromises = eventAttendanceInfos.map((attendanceInfo) => {
+        return trx.eventAttendanceInfo.create({
+          data: {
+            startAt: new Date(attendanceInfo.startAt).toISOString(),
+            endAt: new Date(attendanceInfo.endAt).toISOString(),
+            eventId: event.id
+          }
+        })
+      })
+
+      await trx.eventRegistrationInfo.deleteMany({ where: { eventId: event.id } })
+      const createEventRegistrationPromises = eventRegistrationInfos.map((registrationInfo) => {
+        return trx.eventRegistrationInfo.create({
+          data: {
+            startAt: new Date(registrationInfo.startAt).toISOString(),
+            endAt: new Date(registrationInfo.endAt).toISOString(),
+            eventId: event.id
+          }
+        })
+      })
+
+      await trx.eventRole.deleteMany({ where: { eventId: event.id } })
+      const createEventRoles = eventRoles.map((role) =>
+        trx.eventRole.create({
+          data: {
+            name: role.name,
+            description: role.description,
+            score: Number(role.score),
+            quantity: Number(role.quantity),
+            isNeedApprove: role.isNeedApprove,
+            eventId: event.id
+          }
+        })
+      )
+
+      await trx.organizationInEvent.deleteMany({ where: { eventId: event.id } })
+      const createOrganizationInEventPromises = organizationsInEvent.map((organization) =>
+        trx.organizationInEvent.create({
+          data: {
+            organizationId: organization.organizationId,
+            role: organization.role,
+            eventId: event.id,
+            organizationRepresentativesInEvent: {
+              createMany: {
+                data: organization.organizationRepresentativesInEvent.map(({ organizationContactId, role }) => ({
+                  organizationContactId,
+                  role
+                })),
+                skipDuplicates: true
+              }
+            }
+          }
+        })
+      )
+
+      await Promise.all([
+        ...createEventAttendancePromises,
+        ...createEventRegistrationPromises,
+        ...createEventRoles,
+        ...createOrganizationInEventPromises
+      ])
+
+      const representative = await trx.organizationInEvent.findUnique({
+        where: {
+          eventId_organizationId: {
+            eventId: event.id,
+            organizationId: organizationRepresentativeId
+          }
+        }
+      })
+
+      await trx.event.update({
+        where: { id: event.id },
+        data: {
+          organizationRepresentative: {
+            connect: {
+              id: representative.id
+            }
+          }
+        }
+      })
+
+      return updateEvent
+    })
+  }
+
+  cancel = async (id: string, user: RequestUser) => {
+    await this.getById(id)
+
+    if (user.roles.includes(UserRole.ADMIN)) {
+      await this.prisma.event.update({
+        where: { id },
+        data: {
+          status: EventStatus.Cancelled
+        }
+      })
+    }
+  }
+
+  approve = async (id: string, user: RequestUser) => {
+    await this.getById(id)
+
+    if (user.roles.includes(UserRole.ADMIN)) {
+      await this.prisma.event.update({
+        where: { id },
+        data: {
+          status: EventStatus.Approved
+        }
+      })
+    }
+  }
+
+  reject = async (id: string, user: RequestUser) => {
+    await this.getById(id)
+
+    if (user.roles.includes(UserRole.ADMIN)) {
+      await this.prisma.event.update({
+        where: { id },
+        data: {
+          status: EventStatus.Rejected
+        }
+      })
+    }
   }
 
   getCurrentEventStatus = (

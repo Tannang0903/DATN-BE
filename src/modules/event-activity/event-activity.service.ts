@@ -1,6 +1,6 @@
 import { PrismaService } from '@db'
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { GetEventActivitiesByCategoryIdDto, GetEventActivitiesDto } from './dto'
+import { GetEventActivitiesDto } from './dto'
 import { Prisma } from '@prisma/client'
 import { isEmpty } from 'lodash'
 
@@ -8,14 +8,12 @@ import { isEmpty } from 'lodash'
 export class EventActivityService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getByCategoryId = async (params: GetEventActivitiesByCategoryIdDto) => {
-    const { categoryId } = params
-
+  getByCategoryId = async (id: string) => {
     const whereConditions: Prisma.Enumerable<Prisma.EventActivityWhereInput> = []
 
-    if (categoryId) {
+    if (id) {
       const category = await this.prisma.eventCategory.findUnique({
-        where: { id: categoryId }
+        where: { id: id }
       })
 
       if (isEmpty(category)) {
@@ -27,7 +25,7 @@ export class EventActivityService {
       }
 
       whereConditions.push({
-        eventCategoryId: categoryId
+        eventCategoryId: id
       })
     }
 

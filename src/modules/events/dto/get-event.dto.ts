@@ -1,11 +1,31 @@
 import { IsOrderQueryParam } from '@common/decorator'
 import { Type } from 'class-transformer'
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator'
+import { IsEnum, IsISO8601, IsNumber, IsOptional, IsString } from 'class-validator'
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { EventType } from '@prisma/client'
+import { EventStatus, EventType } from '@prisma/client'
 import { GetAllEventsOrderByEnum } from '../event.enum'
 
 export class GetEventsDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsISO8601()
+  startDate?: Date
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsISO8601()
+  endDate?: Date
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEnum(EventType)
+  eventType?: EventType
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEnum(EventStatus)
+  eventStatus?: EventStatus
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -30,9 +50,4 @@ export class GetEventsDto {
   @Type(() => Number)
   @IsNumber()
   pageSize?: number
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEnum(EventType)
-  eventType?: EventType
 }

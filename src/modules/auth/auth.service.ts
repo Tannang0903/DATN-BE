@@ -3,7 +3,7 @@ import { PrismaService } from 'src/database'
 import { UserService } from '../users/users.service'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
-import { RequestUser, compareHash, hashPassword } from 'src/common'
+import { AdminRole, RequestUser, compareHash, hashPassword } from 'src/common'
 import { ResetPasswordDto, getUsersPayload } from './dto'
 import { MailService } from '../mail'
 import { ChangePasswordDto } from './dto/change-password.dto'
@@ -76,7 +76,7 @@ export class AuthService {
   adminLogin = async (userNameOrEmail: string, password: string) => {
     const user = await this.userService.getByUserNameOrEmail(userNameOrEmail)
 
-    const isValidRole = user.roles.some((role) => role.identityRole.name === 'ADMIN')
+    const isValidRole = user.roles.some((role) => Object.keys(AdminRole).includes(role.identityRole.name))
     if (!isValidRole) {
       throw new BadRequestException({
         message: 'User does not exist',
@@ -104,7 +104,7 @@ export class AuthService {
   studentLogin = async (userNameOrEmail: string, password: string) => {
     const user = await this.userService.getByUserNameOrEmail(userNameOrEmail)
 
-    const isValidRole = user.roles.some((role) => role.identityRole.name !== 'ADMIN')
+    const isValidRole = user.roles.some((role) => !Object.keys(AdminRole).includes(role.identityRole.name))
     if (!isValidRole) {
       throw new BadRequestException({
         message: 'User does not exist',

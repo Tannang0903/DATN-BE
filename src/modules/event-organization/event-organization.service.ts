@@ -146,7 +146,7 @@ export class EventOrganizationService {
     const user = await this.userService.create({
       username: email,
       email: email,
-      password: phone,
+      password: '12345678',
       fullname: name,
       imageUrl: imageUrl,
       rolesId: [role.id]
