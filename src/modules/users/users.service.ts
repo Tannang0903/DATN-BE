@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { CreateUserDto, UpdateUserDto } from './dto'
 import { PrismaService } from 'src/database'
-import { RequestUser, hashPassword } from 'src/common'
+import { RequestUser, UserRole, hashPassword } from 'src/common'
 import { RoleService } from '../roles'
 import { isEmpty } from 'lodash'
 
@@ -186,6 +186,63 @@ export class UserService {
     return {
       ...user,
       roles: user.roles.map((_) => _.identityRole)
+    }
+  }
+
+  getProfileStudent = async (reqUser: RequestUser) => {
+    if (reqUser.roles.some((role) => role === UserRole.STUDENT)) {
+      const user = await this.prisma.identityUser.findUnique({
+        where: { id: reqUser.id },
+        select: {
+          student: {
+            select: {
+              id: true,
+              code: true,
+              fullname: true,
+              gender: true,
+              birth: true,
+              hometown: true,
+              address: true,
+              imageUrl: true,
+              citizenId: true,
+              email: true,
+              phone: true,
+              identityId: true,
+              homeRoom: {
+                select: {
+                  id: true,
+                  name: true,
+                  facultyId: true
+                }
+              },
+              faculty: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              },
+              educationProgram: {
+                select: {
+                  id: true,
+                  name: true,
+                  requiredActivityScore: true,
+                  requiredCredit: true
+                }
+              }
+            }
+          }
+        }
+      })
+
+      if (isEmpty(user)) {
+        throw new BadRequestException({
+          message: 'User does not exist',
+          error: 'User:000001',
+          statusCode: 400
+        })
+      }
+
+      return user.student
     }
   }
 

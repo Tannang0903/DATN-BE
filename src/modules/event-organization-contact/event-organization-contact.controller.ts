@@ -19,7 +19,7 @@ export class EventOrganizationContactController {
   constructor(private readonly eventOrganizationContactService: EventOrganizationContactService) {}
 
   @Get('event-organizations/:id/contacts')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.OK)
   async getAllEventOrganizationContactsByOrganizationId(
     @Param() { id }: UUIDParam,
@@ -29,7 +29,7 @@ export class EventOrganizationContactController {
   }
 
   @Post('event-organizations/:id/contacts')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.CREATED)
   async createEventOrganizationContact(
     @Param() { id }: UUIDParam,
@@ -39,7 +39,7 @@ export class EventOrganizationContactController {
   }
 
   @Put('event-organizations/:id/contacts/:contactId')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.NO_CONTENT)
   async updateEventOrganizationContact(
     @Param() { id, contactId }: EventOrganizationRequestParam,
@@ -49,7 +49,7 @@ export class EventOrganizationContactController {
   }
 
   @Delete('event-organizations/:id/contacts/:contactId')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeEventOrganizationContact(@Param() { id, contactId }: EventOrganizationRequestParam) {
     return await this.eventOrganizationContactService.delete(id, contactId)

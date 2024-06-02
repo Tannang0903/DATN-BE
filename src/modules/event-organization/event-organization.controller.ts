@@ -14,14 +14,14 @@ export class EventOrganizationController {
   constructor(private readonly eventOrganizationService: EventOrganizationService) {}
 
   @Get('event-organizations/:id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.OK)
   async getEventOrganizationById(@Param() { id }: UUIDParam) {
     return await this.eventOrganizationService.getById(id)
   }
 
   @Get('event-organizations')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.OK)
   async getAllEventOrganizations(@Query() params: GetEventOrganizationsDto) {
     return await this.eventOrganizationService.getAll(params)

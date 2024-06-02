@@ -8,8 +8,6 @@ import { CreateEventDto, GetEventsDto } from './dto'
 
 @Controller()
 @ApiTags('Event')
-@ApiBearerAuth()
-@UseGuards(AccessTokenGuard)
 export class EventController {
   constructor(private readonly eventService: EventService) {}
 
@@ -21,11 +19,21 @@ export class EventController {
 
   @Get('events')
   @HttpCode(HttpStatus.OK)
-  async getAllEvents(@Query() params: GetEventsDto) {
-    return await this.eventService.getAll(params)
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  async getAllEvents(@ReqUser() user: RequestUser, @Query() params: GetEventsDto) {
+    return await this.eventService.getAll(user, params)
+  }
+
+  @Get('events-public')
+  @HttpCode(HttpStatus.OK)
+  async getAllPublicEvents(@ReqUser() user: RequestUser, @Query() params: GetEventsDto) {
+    return await this.eventService.getAll(user, params)
   }
 
   @Post('events')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
   @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.CREATED)
   async createEvent(@ReqUser() user: RequestUser, @Body() createEventDto: CreateEventDto) {
@@ -33,6 +41,8 @@ export class EventController {
   }
 
   @Put('events/:id')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
   @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.CREATED)
   async updateEvent(@Param() { id }: UUIDParam, @ReqUser() user: RequestUser, @Body() createEventDto: CreateEventDto) {
@@ -40,6 +50,8 @@ export class EventController {
   }
 
   @Post('events/:id/cancel')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
   @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.CREATED)
   async cancelEvent(@Param() { id }: UUIDParam, @ReqUser() user: RequestUser) {
@@ -47,6 +59,8 @@ export class EventController {
   }
 
   @Post('events/:id/approve')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
   @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.CREATED)
   async approveEvent(@Param() { id }: UUIDParam, @ReqUser() user: RequestUser) {
@@ -54,6 +68,8 @@ export class EventController {
   }
 
   @Post('events/:id/reject')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
   @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.CREATED)
   async rejectEvent(@Param() { id }: UUIDParam, @ReqUser() user: RequestUser) {

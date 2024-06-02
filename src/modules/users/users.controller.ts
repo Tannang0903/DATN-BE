@@ -16,4 +16,10 @@ export class UserController {
   async getProfile(@ReqUser() user: RequestUser) {
     return await this.userService.getProfile(user)
   }
+
+  @Get('profile/student')
+  @HttpCode(HttpStatus.OK)
+  async getProfileStudent(@ReqUser() user: RequestUser) {
+    return await this.userService.getProfileStudent(user)
+  }
 }

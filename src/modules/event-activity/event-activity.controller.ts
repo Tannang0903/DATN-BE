@@ -1,14 +1,11 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Query, UseGuards } from '@nestjs/common'
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
-import { AccessTokenGuard } from 'src/guard'
+import { Controller, Get, HttpCode, HttpStatus, Param, Query } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { EventActivityService } from './event-activity.service'
 import { GetEventActivitiesDto } from './dto'
 import { UUIDParam } from '@common/types'
 
 @Controller()
 @ApiTags('EventActivity')
-@ApiBearerAuth()
-@UseGuards(AccessTokenGuard)
 export class EventActivityController {
   constructor(private readonly eventActivityService: EventActivityService) {}
 

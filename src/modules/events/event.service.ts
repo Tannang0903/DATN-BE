@@ -12,7 +12,7 @@ import { CreateEventDto, GetEventsDto } from './dto'
 export class EventService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getAll = async (params: GetEventsDto) => {
+  getAll = async (user: RequestUser, params: GetEventsDto) => {
     const { startDate, endDate, eventType, eventStatus, search, sorting } = params
 
     const pageSize = params.pageSize ? params.pageSize : 10
@@ -33,12 +33,6 @@ export class EventService {
     if (eventType) {
       whereConditions.push({
         type: eventType
-      })
-    }
-
-    if (eventStatus) {
-      whereConditions.push({
-        status: eventStatus
       })
     }
 
@@ -64,6 +58,14 @@ export class EventService {
     }
 
     const orderBy = getOrderBy<Event>({ defaultValue: 'name', order: sorting })
+
+    if (user) {
+      if (user.roles.some((role) => role !== UserRole.ADMIN)) {
+        whereConditions.push({
+          createdBy: user.id
+        })
+      }
+    }
 
     const [total, events] = await Promise.all([
       this.prisma.event.count({
@@ -146,8 +148,7 @@ export class EventService {
             }
           }
         },
-        take: pageSize,
-        skip: Number((page - 1) * pageSize),
+
         orderBy: orderBy
       })
     ])
@@ -196,7 +197,16 @@ export class EventService {
       }
     })
 
-    return Pagination.of(page, pageSize, total, listEvents)
+    const filteredByStatusListEvents = eventStatus
+      ? listEvents.filter((event) => event.calculatedStatus === eventStatus)
+      : listEvents
+
+    const paginatedList = filteredByStatusListEvents.slice(
+      Number((page - 1) * pageSize),
+      Number((page - 1) * pageSize) + pageSize
+    )
+
+    return Pagination.of(page, pageSize, total, paginatedList)
   }
 
   getById = async (id: string) => {
