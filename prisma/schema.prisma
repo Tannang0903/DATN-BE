@@ -203,8 +203,8 @@ model Event {
   endAt                        DateTime    @default(now()) @map("end_at") @db.Timestamptz(6)
   type                         EventType
   fullAddress                  String      @db.Text
-  longitude                    Int         @db.Integer()
-  latitude                     Int         @db.Integer()
+  longitude                    Decimal     @db.Decimal(30, 20)
+  latitude                     Decimal     @db.Decimal(30, 20) 
   eventActivityId              String?     @map("event_activity_id") @db.Uuid
   status                       EventStatus
   createdAt                    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)

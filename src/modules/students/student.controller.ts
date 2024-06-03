@@ -2,8 +2,8 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, 
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { AccessTokenGuard } from 'src/guard'
 import { StudentService } from './student.service'
-import { Roles } from '@common/decorator'
-import { UserRole, UUIDParam } from '@common/types'
+import { ReqUser, Roles } from '@common/decorator'
+import { RequestUser, UserRole, UUIDParam } from '@common/types'
 import { CreateStudentDto } from './dto/create-student.dto'
 import { GetStudentsDto } from './dto'
 import { UpdateStudentDto } from './dto/update-student.dto'
@@ -48,5 +48,12 @@ export class StudentController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeStudent(@Param() { id }: UUIDParam) {
     return await this.studentService.delete(id)
+  }
+
+  @Put('profile/student')
+  @Roles(UserRole.STUDENT)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async updateProfileStudent(@ReqUser() user: RequestUser, @Body() updateStudentDto: UpdateStudentDto) {
+    return await this.studentService.updateProfile(user, updateStudentDto)
   }
 }

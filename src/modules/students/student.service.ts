@@ -1,16 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from 'src/database'
-import { CreateStudentDto } from './dto/create-student.dto'
 import { validateBirth } from '@common/utils/helpers'
 import { isNotEmpty } from 'class-validator'
 import { UserService } from '@modules/users'
-import { GetStudentsDto } from './dto'
+import { CreateStudentDto, GetStudentsDto, UpdateProfileDto, UpdateStudentDto } from './dto'
 import { PaginatedResult, Pagination } from '@common/pagination'
 import { Prisma, Student } from '@prisma/client'
 import { getOrderBy, searchByMode } from '@common/utils'
 import { isEmpty } from 'lodash'
-import { UpdateStudentDto } from './dto/update-student.dto'
 import { GetAllStudentsOrderByEnum } from './student.enum'
+import { RequestUser } from '@common/types'
 
 @Injectable()
 export class StudentService {
@@ -403,5 +402,41 @@ export class StudentService {
     })
 
     await this.userService.delete(student.identityId)
+  }
+
+  updateProfile = async (user: RequestUser, data: UpdateProfileDto) => {
+    const { email, phone, address, hometown, imageUrl } = data
+
+    const student = await this.prisma.student.findUnique({
+      where: {
+        identityId: user.id
+      }
+    })
+
+    const isChangeEmail = student.email !== email
+    if (isChangeEmail) {
+      const existedEmail = await this.getByEmail(email)
+
+      if (isNotEmpty(existedEmail)) {
+        throw new BadRequestException({
+          message: 'Student with the given email has already existed',
+          error: 'Student:000004',
+          statusCode: 400
+        })
+      }
+    }
+
+    await this.prisma.student.update({
+      where: {
+        identityId: user.id
+      },
+      data: {
+        email,
+        phone,
+        hometown,
+        address,
+        imageUrl
+      }
+    })
   }
 }
