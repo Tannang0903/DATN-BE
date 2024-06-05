@@ -4,7 +4,9 @@ import { AccessTokenGuard } from 'src/guard'
 import { EventService } from './event.service'
 import { ReqUser, Roles } from '@common/decorator'
 import { RequestUser, UserRole, UUIDParam } from '@common/types'
-import { CreateEventDto, GetEventsDto } from './dto'
+import { CreateEventDto, GetEventsDto, RegisterEventDto, RejectStudentRegisterEventDto } from './dto'
+import { GuestRoute } from '@common/decorator/guest.decorator'
+import { EventRegisterStudentParam } from '@modules/event-organization-contact/dto'
 
 @Controller()
 @ApiTags('Event')
@@ -13,22 +15,24 @@ export class EventController {
 
   @Get('events/:id')
   @HttpCode(HttpStatus.OK)
-  async getEventById(@Param() { id }: UUIDParam) {
-    return await this.eventService.getById(id)
+  @GuestRoute()
+  @UseGuards(AccessTokenGuard)
+  async getEventById(@ReqUser() user: RequestUser, @Param() { id }: UUIDParam) {
+    return await this.eventService.getById(user, id)
   }
 
   @Get('events')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @GuestRoute()
   @UseGuards(AccessTokenGuard)
   async getAllEvents(@ReqUser() user: RequestUser, @Query() params: GetEventsDto) {
     return await this.eventService.getAll(user, params)
   }
 
-  @Get('events-public')
+  @Get('events/:id/registered-students')
   @HttpCode(HttpStatus.OK)
-  async getAllPublicEvents(@ReqUser() user: RequestUser, @Query() params: GetEventsDto) {
-    return await this.eventService.getAll(user, params)
+  async getAllRegisteredStudent(@Param() { id }: UUIDParam, @Query() params: GetEventsDto) {
+    return await this.eventService.getAllRegisteredStudent(id, params)
   }
 
   @Post('events')
@@ -74,5 +78,35 @@ export class EventController {
   @HttpCode(HttpStatus.CREATED)
   async rejectEvent(@Param() { id }: UUIDParam, @ReqUser() user: RequestUser) {
     return await this.eventService.reject(id, user)
+  }
+
+  @Post('/events/register')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @Roles(UserRole.STUDENT)
+  @HttpCode(HttpStatus.CREATED)
+  async registerEvent(@ReqUser() user: RequestUser, @Body() registerEventDto: RegisterEventDto) {
+    return await this.eventService.register(user, registerEventDto)
+  }
+
+  @Post('/students/:id/event-registers/:eventRegisterId/approve')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  async approveRegisterStudent(@Param() { id, eventRegisterId }: EventRegisterStudentParam) {
+    return await this.eventService.approveRegister(id, eventRegisterId)
+  }
+
+  @Post('/students/:id/event-registers/:eventRegisterId/reject')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  async rejectRegisterStudent(
+    @Param() { id, eventRegisterId }: EventRegisterStudentParam,
+    @Body() data: RejectStudentRegisterEventDto
+  ) {
+    return await this.eventService.rejectRegister(id, eventRegisterId, data)
   }
 }

@@ -121,7 +121,7 @@ model Student {
   homeRoom             HomeRoom              @relation(fields: [homeRoomId], references: [id])
   educationProgram     EducationProgram      @relation(fields: [educationProgramId], references: [id])
   identityUser         IdentityUser          @relation(fields: [identityId], references: [id], onDelete: Cascade)
-  studentEventRegister StudentEventRegister?
+  studentEventRegister StudentEventRegister[]
 }
 
 model Faculty {
@@ -277,12 +277,12 @@ model StudentEventRegister {
   description  String         @db.Text
   rejectReason String?        @db.Text
   status       RegisterStatus
-  studentId    String         @map("student_id") @db.Uuid @unique 
+  studentId    String         @map("student_id") @db.Uuid  
   eventRoleId  String         @map("event_role_id") @db.Uuid
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  creaetdBy    String         @db.Uuid @map("created_by")
+  createdBy    String         @db.Uuid @map("created_by")
   updatedAt    DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
-  updatedBy    String         @db.Uuid @map("updated_by")
+  updatedBy    String?        @db.Uuid @map("updated_by")
 
   student   Student   @relation(fields: [studentId], references: [id])
   eventRole EventRole @relation(fields: [eventRoleId], references: [id])
@@ -373,5 +373,3 @@ model SpecialProof  {
 
   eventActivity EventActivity @relation(fields: [activityId], references: [id])
 }
-
-

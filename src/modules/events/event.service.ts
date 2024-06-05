@@ -1,12 +1,11 @@
 import { PrismaService } from '@db'
 import { BadRequestException, Injectable } from '@nestjs/common'
-import { Event, EventAttendanceInfo, EventRegistrationInfo, EventStatus, Prisma, RegisterStatus } from '@prisma/client'
-import { getOrderBy, searchByMode } from '@common/utils'
+import { Event, EventStatus, Prisma, RegisterStatus } from '@prisma/client'
+import { getCurrentEventInfos, getCurrentEventStatus, getOrderBy, searchByMode } from '@common/utils'
 import { Pagination } from '@common/pagination'
 import { isEmpty } from 'lodash'
 import { RequestUser, UserRole } from '@common/types'
-import { UpdateEventDto } from './dto/update-event.dto'
-import { CreateEventDto, GetEventsDto } from './dto'
+import { CreateEventDto, GetEventsDto, RegisterEventDto, RejectStudentRegisterEventDto, UpdateEventDto } from './dto'
 
 @Injectable()
 export class EventService {
@@ -60,7 +59,7 @@ export class EventService {
     const orderBy = getOrderBy<Event>({ defaultValue: 'name', order: sorting })
 
     if (user) {
-      if (user.roles.some((role) => role !== UserRole.ADMIN)) {
+      if (user.roles.some((role) => role !== UserRole.ADMIN && role !== UserRole.STUDENT)) {
         whereConditions.push({
           createdBy: user.id
         })
@@ -164,7 +163,7 @@ export class EventService {
         endAt: event.endAt,
         type: event.type,
         status: event.status,
-        calculatedStatus: this.getCurrentEventStatus(
+        calculatedStatus: getCurrentEventStatus(
           event.startAt,
           event.endAt,
           event.status,
@@ -209,7 +208,72 @@ export class EventService {
     return Pagination.of(page, pageSize, total, paginatedList)
   }
 
-  getById = async (id: string) => {
+  getAllRegisteredStudent = async (id: string, params: GetEventsDto) => {
+    const pageSize = params.pageSize ? params.pageSize : 10
+    const page = params.page ? params.page : 1
+
+    const [registeredStudents] = await Promise.all([
+      this.prisma.studentEventRegister.findMany({
+        where: {
+          eventRole: {
+            eventId: id
+          }
+        },
+        select: {
+          id: true,
+          rejectReason: true,
+          status: true,
+          createdAt: true,
+          description: true,
+          eventRole: {
+            select: {
+              name: true
+            }
+          },
+          student: {
+            select: {
+              id: true,
+              code: true,
+              fullname: true,
+              email: true,
+              phone: true,
+              address: true,
+              imageUrl: true,
+              homeRoom: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
+        },
+        take: pageSize,
+        skip: Number((page - 1) * pageSize)
+      })
+    ])
+
+    const listRegisteredStudent = registeredStudents.map((studentRegistered) => {
+      return {
+        role: studentRegistered.eventRole.name,
+        id: studentRegistered.id,
+        code: studentRegistered.student.code,
+        studentId: studentRegistered.student.id,
+        name: studentRegistered.student.fullname,
+        email: studentRegistered.student.email,
+        phone: studentRegistered.student.phone,
+        description: studentRegistered.description,
+        rejectReason: studentRegistered.rejectReason,
+        status: studentRegistered.status,
+        imageUrl: studentRegistered.student.imageUrl,
+        homeRoomName: studentRegistered.student.homeRoom.name,
+        registeredAt: studentRegistered.createdAt
+      }
+    })
+
+    return Pagination.of(page, pageSize, registeredStudents.length, listRegisteredStudent)
+  }
+
+  getById = async (user: RequestUser, id: string) => {
     const event = await this.prisma.event.findUnique({
       where: { id: id },
       select: {
@@ -282,7 +346,12 @@ export class EventService {
             studentsEventRegister: {
               select: {
                 id: true,
-                status: true
+                status: true,
+                student: {
+                  select: {
+                    identityId: true
+                  }
+                }
               }
             }
           }
@@ -296,7 +365,16 @@ export class EventService {
             eventId: true,
             eventsAttendance: {
               select: {
-                studentEventRegisterId: true
+                studentEventRegisterId: true,
+                studentEventRegister: {
+                  select: {
+                    student: {
+                      select: {
+                        identityId: true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -330,7 +408,7 @@ export class EventService {
       endAt: event.endAt,
       type: event.type,
       status: event.status,
-      calculatedStatus: this.getCurrentEventStatus(
+      calculatedStatus: getCurrentEventStatus(
         event.startAt,
         event.endAt,
         event.status,
@@ -367,7 +445,7 @@ export class EventService {
           id: registration.id,
           startAt: registration.startAt,
           endAt: registration.endAt,
-          status: this.getCurrentEventInfos(registration.startAt, registration.endAt)
+          status: getCurrentEventInfos(registration.startAt, registration.endAt)
         }
       }),
       eventAttendanceInfos: event.eventAttendanceInfos.map((attendance) => {
@@ -376,7 +454,7 @@ export class EventService {
           startAt: attendance.startAt,
           endAt: attendance.endAt,
           code: attendance.code,
-          status: this.getCurrentEventInfos(attendance.startAt, attendance.endAt)
+          status: getCurrentEventInfos(attendance.startAt, attendance.endAt)
         }
       }),
       eventOrganizations: event.organizationsInEvent.map((item) => {
@@ -425,7 +503,17 @@ export class EventService {
       hasOrganizedRegistration: event.eventRegistrationInfos.some((registrationInfo) => {
         const today = new Date()
         return today.getTime() >= registrationInfo.startAt.getTime()
-      })
+      }),
+      isRegistered: user
+        ? event.eventRoles.some((role) =>
+            role.studentsEventRegister.some((student) => student.student.identityId === user.id)
+          )
+        : false,
+      isAttendance: user
+        ? event.eventAttendanceInfos.some((attendanceInfo) =>
+            attendanceInfo.eventsAttendance.some((event) => event.studentEventRegister.student.identityId === user.id)
+          )
+        : false
     }
 
     return eventResult
@@ -569,7 +657,7 @@ export class EventService {
       organizationRepresentativeId
     } = data
 
-    const event = await this.getById(id)
+    const event = await this.getById(user, id)
 
     return await this.prisma.$transaction(async (trx) => {
       const updateEvent = await trx.event.update({
@@ -678,7 +766,7 @@ export class EventService {
   }
 
   cancel = async (id: string, user: RequestUser) => {
-    await this.getById(id)
+    await this.getById(user, id)
 
     if (user.roles.includes(UserRole.ADMIN)) {
       await this.prisma.event.update({
@@ -691,7 +779,7 @@ export class EventService {
   }
 
   approve = async (id: string, user: RequestUser) => {
-    await this.getById(id)
+    await this.getById(user, id)
 
     if (user.roles.includes(UserRole.ADMIN)) {
       await this.prisma.event.update({
@@ -704,7 +792,7 @@ export class EventService {
   }
 
   reject = async (id: string, user: RequestUser) => {
-    await this.getById(id)
+    await this.getById(user, id)
 
     if (user.roles.includes(UserRole.ADMIN)) {
       await this.prisma.event.update({
@@ -716,59 +804,174 @@ export class EventService {
     }
   }
 
-  getCurrentEventStatus = (
-    startAt: Date,
-    endAt: Date,
-    status: EventStatus,
-    eventAttendanceInfos: EventAttendanceInfo[],
-    eventRegistrationInfos: EventRegistrationInfo[]
-  ) => {
-    const now = new Date()
-    if (
-      status === 'Approved' &&
-      startAt <= now &&
-      endAt >= now &&
-      eventAttendanceInfos.some((attendanceInfo) => attendanceInfo.startAt <= now && attendanceInfo.endAt >= now)
-    ) {
-      return 'Attendance'
-    } else if (status === 'Approved' && startAt <= now && endAt >= now) {
-      return 'Happening'
-    } else if (
-      status === 'Approved' &&
-      startAt >= now &&
-      eventRegistrationInfos.some(
-        (registrationInfo) => now >= registrationInfo.startAt && now <= registrationInfo.endAt
-      )
-    ) {
-      return 'Registration'
-    } else if (
-      status === 'Approved' &&
-      startAt >= now &&
-      eventRegistrationInfos.every((registrationInfo) => now >= registrationInfo.endAt)
-    ) {
-      return 'ClosedRegistration'
-    } else if (status === 'Approved' && startAt >= now) {
-      return 'Upcoming'
-    } else if (status === 'Approved' && endAt <= now) {
-      return 'Done'
-    } else if (
-      status === 'Pending' &&
-      eventRegistrationInfos.some((registrationInfo) => registrationInfo.startAt <= now)
-    ) {
-      return 'Expired'
+  register = async (user: RequestUser, data: RegisterEventDto) => {
+    const { description, eventRoleId } = data
+
+    const eventRole = await this.getEventRoleById(eventRoleId)
+
+    if (eventRole.quantity <= eventRole.studentsEventRegister.length) {
+      throw new BadRequestException({
+        message: 'Event role is full',
+        error: 'EventRole:000002',
+        statusCode: 400
+      })
     }
 
-    return status
+    const currentTime = new Date()
+
+    const isRegistrationPeriod = eventRole.event.eventRegistrationInfos.some((info) => {
+      const startTime = new Date(info.startAt)
+      const endTime = new Date(info.endAt)
+
+      return currentTime >= startTime && currentTime <= endTime
+    })
+
+    if (!isRegistrationPeriod) {
+      throw new BadRequestException({
+        message: 'Registration period is over',
+        error: 'EventRole:000003',
+        statusCode: 400
+      })
+    }
+
+    const identityUser = await this.prisma.identityUser.findUnique({
+      where: {
+        id: user.id
+      },
+      select: {
+        id: true,
+        student: {
+          select: {
+            id: true
+          }
+        }
+      }
+    })
+
+    const studentRegisteredEvent = await this.prisma.studentEventRegister.findFirst({
+      where: {
+        studentId: identityUser.student.id,
+        eventRole: {
+          eventId: eventRole.event.id
+        },
+        status: EventStatus.Approved
+      }
+    })
+
+    if (studentRegisteredEvent) {
+      throw new BadRequestException({
+        message: 'Student has already registered for an event',
+        error: 'EventRole:000004',
+        statusCode: 400
+      })
+    }
+
+    if (isEmpty(identityUser)) {
+      throw new BadRequestException({
+        message: 'User does not exist',
+        error: 'User:000001',
+        statusCode: 400
+      })
+    }
+
+    if (eventRole.isNeedApprove) {
+      await this.prisma.studentEventRegister.create({
+        data: {
+          description,
+          eventRoleId,
+          studentId: identityUser.student.id,
+          createdBy: identityUser.id,
+          status: RegisterStatus.Pending,
+          updatedBy: identityUser.id
+        }
+      })
+    } else {
+      await this.prisma.studentEventRegister.create({
+        data: {
+          description: description,
+          status: RegisterStatus.Approved,
+          studentId: identityUser.student.id,
+          eventRoleId: eventRoleId,
+          createdBy: identityUser.id,
+          updatedBy: identityUser.id
+        }
+      })
+    }
   }
 
-  getCurrentEventInfos = (startAt: Date, endAt: Date) => {
-    const now = new Date()
-    if (startAt <= now && endAt >= now) {
-      return 'Happening'
-    } else if (startAt >= now) {
-      return 'Upcoming'
-    } else if (endAt <= now) {
-      return 'Done'
+  getEventRoleById = async (id: string) => {
+    const eventRole = await this.prisma.eventRole.findUnique({
+      where: {
+        id
+      },
+      select: {
+        id: true,
+        name: true,
+        quantity: true,
+        isNeedApprove: true,
+        score: true,
+        studentsEventRegister: {
+          where: {
+            status: RegisterStatus.Approved
+          },
+          select: {
+            id: true
+          }
+        },
+        event: {
+          select: {
+            id: true,
+            eventRegistrationInfos: true
+          }
+        }
+      }
+    })
+
+    if (isEmpty(eventRole)) {
+      throw new BadRequestException({
+        message: 'Event role does not exist',
+        error: 'EventRole:000001',
+        statusCode: 400
+      })
     }
+
+    return eventRole
+  }
+
+  approveRegister = async (id: string, eventRegisterId: string) => {
+    const studentEventRegister = await this.prisma.studentEventRegister.findUnique({
+      where: {
+        studentId: id,
+        id: eventRegisterId
+      }
+    })
+
+    await this.prisma.studentEventRegister.update({
+      where: {
+        id: studentEventRegister.id
+      },
+      data: {
+        status: RegisterStatus.Approved
+      }
+    })
+  }
+
+  rejectRegister = async (id: string, eventRegisterId: string, data: RejectStudentRegisterEventDto) => {
+    const studentEventRegister = await this.prisma.studentEventRegister.findUnique({
+      where: {
+        studentId: id,
+        id: eventRegisterId
+      }
+    })
+
+    await this.prisma.studentEventRegister.update({
+      where: {
+        id: studentEventRegister.id
+      },
+      data: {
+        status: RegisterStatus.Rejected,
+        rejectReason: data.rejectReason
+      }
+    })
   }
 }
