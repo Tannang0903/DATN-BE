@@ -16,6 +16,7 @@ import { EventCategoryModule } from '@modules/event-category'
 import { EventActivityModule } from '@modules/event-activity'
 import { EventOrganizationModule } from '@modules/event-organization'
 import { EventOrganizationContactModule } from '@modules/event-organization-contact'
+import { ProofModule } from '@modules/proofs'
 
 @Module({
   imports: [
@@ -32,7 +33,8 @@ import { EventOrganizationContactModule } from '@modules/event-organization-cont
     EventCategoryModule,
     EventActivityModule,
     EventOrganizationModule,
-    EventOrganizationContactModule
+    EventOrganizationContactModule,
+    ProofModule
   ],
   controllers: [AppController],
   providers: [

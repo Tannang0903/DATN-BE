@@ -6,6 +6,7 @@ import { Pagination } from '@common/pagination'
 import { isEmpty } from 'lodash'
 import { RequestUser, UserRole } from '@common/types'
 import { CreateEventDto, GetEventsDto, RegisterEventDto, RejectStudentRegisterEventDto, UpdateEventDto } from './dto'
+import { GetAllEventsOrderByEnum } from './event.enum'
 
 @Injectable()
 export class EventService {
@@ -56,7 +57,11 @@ export class EventService {
       })
     }
 
-    const orderBy = getOrderBy<Event>({ defaultValue: 'name', order: sorting })
+    const mappedOrder = {
+      [GetAllEventsOrderByEnum.REPRESENTATIVE_ORGANIZATION]: 'organizationRepresentative.eventOrganization.name'
+    }
+
+    const orderBy = getOrderBy<Event>({ defaultValue: 'name', order: sorting, mappedOrder })
 
     if (user) {
       if (user.roles.some((role) => role !== UserRole.ADMIN && role !== UserRole.STUDENT)) {

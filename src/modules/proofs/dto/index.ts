@@ -1,0 +1,5 @@
+export * from './proof-internal.dto'
+export * from './proof-external.dto'
+export * from './proof-special.dto'
+export * from './get-proof.dto'
+export * from './reject-proof.dto'
