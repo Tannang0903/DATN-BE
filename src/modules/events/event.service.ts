@@ -5,9 +5,18 @@ import { getCurrentEventInfos, getCurrentEventStatus, getOrderBy, searchByMode }
 import { Pagination } from '@common/pagination'
 import { isEmpty } from 'lodash'
 import { RequestUser, UserRole } from '@common/types'
-import { CreateEventDto, GetEventsDto, RegisterEventDto, RejectStudentRegisterEventDto, UpdateEventDto } from './dto'
+import {
+  AttendanceEventDto,
+  CreateEventDto,
+  GetEventsDto,
+  RegisterEventDto,
+  EventAttendanceInfoDto,
+  RejectStudentRegisterEventDto,
+  UpdateEventDto
+} from './dto'
 import { GetAllEventsOrderByEnum } from './event.enum'
-
+import * as qrCode from 'qrcode'
+import * as geolib from 'geolib'
 @Injectable()
 export class EventService {
   constructor(private readonly prisma: PrismaService) {}
@@ -135,6 +144,7 @@ export class EventService {
               endAt: true,
               code: true,
               eventId: true,
+              qrcode: true,
               eventsAttendance: {
                 select: {
                   studentEventRegisterId: true
@@ -145,7 +155,6 @@ export class EventService {
           eventRegistrationInfos: {
             select: {
               id: true,
-
               startAt: true,
               endAt: true,
               eventId: true
@@ -213,7 +222,7 @@ export class EventService {
     return Pagination.of(page, pageSize, total, paginatedList)
   }
 
-  getAllRegisteredStudent = async (id: string, params: GetEventsDto) => {
+  getAllRegisteredStudent = async (eventId: string, params: GetEventsDto) => {
     const pageSize = params.pageSize ? params.pageSize : 10
     const page = params.page ? params.page : 1
 
@@ -221,7 +230,7 @@ export class EventService {
       this.prisma.studentEventRegister.findMany({
         where: {
           eventRole: {
-            eventId: id
+            eventId
           }
         },
         select: {
@@ -276,6 +285,70 @@ export class EventService {
     })
 
     return Pagination.of(page, pageSize, registeredStudents.length, listRegisteredStudent)
+  }
+
+  getAllAttendanceStudent = async (eventId: string, params: GetEventsDto) => {
+    const pageSize = params.pageSize ? params.pageSize : 10
+    const page = params.page ? params.page : 1
+
+    const [attendanceStudents] = await Promise.all([
+      this.prisma.studentEventAttendance.findMany({
+        where: {
+          eventAttendanceInfo: {
+            eventId
+          }
+        },
+        select: {
+          id: true,
+          attendanceAt: true,
+          studentEventRegister: {
+            select: {
+              eventRole: {
+                select: {
+                  name: true,
+                  score: true
+                }
+              },
+              student: {
+                select: {
+                  id: true,
+                  code: true,
+                  fullname: true,
+                  email: true,
+                  phone: true,
+                  address: true,
+                  imageUrl: true,
+                  homeRoom: {
+                    select: {
+                      name: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        take: pageSize,
+        skip: Number((page - 1) * pageSize)
+      })
+    ])
+
+    const listRegisteredStudent = attendanceStudents.map((studentAttendance) => {
+      return {
+        id: studentAttendance.studentEventRegister.student.id,
+        code: studentAttendance.studentEventRegister.student.code,
+        name: studentAttendance.studentEventRegister.student.fullname,
+        email: studentAttendance.studentEventRegister.student.email,
+        phone: studentAttendance.studentEventRegister.student.phone,
+        imageUrl: studentAttendance.studentEventRegister.student.imageUrl,
+        role: studentAttendance.studentEventRegister.eventRole.name,
+        homeRoomName: studentAttendance.studentEventRegister.student.homeRoom.name,
+        score: studentAttendance.studentEventRegister.eventRole.score,
+        attendanceAt: studentAttendance.attendanceAt
+      }
+    })
+
+    return Pagination.of(page, pageSize, listRegisteredStudent.length, listRegisteredStudent)
   }
 
   getById = async (user: RequestUser, id: string) => {
@@ -368,6 +441,7 @@ export class EventService {
             endAt: true,
             code: true,
             eventId: true,
+            qrcode: true,
             eventsAttendance: {
               select: {
                 studentEventRegisterId: true,
@@ -459,7 +533,8 @@ export class EventService {
           startAt: attendance.startAt,
           endAt: attendance.endAt,
           code: attendance.code,
-          status: getCurrentEventInfos(attendance.startAt, attendance.endAt)
+          status: getCurrentEventInfos(attendance.startAt, attendance.endAt),
+          qrCode: attendance.qrcode
         }
       }),
       eventOrganizations: event.organizationsInEvent.map((item) => {
@@ -542,6 +617,8 @@ export class EventService {
       organizationRepresentativeId
     } = data
 
+    const createAttendanceInfosDto = await Promise.all(eventAttendanceInfos.map(this.createAttendanceInfoDto))
+
     return await this.prisma.$transaction(async (trx) => {
       const event = await trx.event.create({
         data: {
@@ -561,12 +638,14 @@ export class EventService {
         }
       })
 
-      const createEventAttendancePromises = eventAttendanceInfos.map((attendanceInfo) => {
+      const createEventAttendancePromises = createAttendanceInfosDto.map((attendanceInfo) => {
         return trx.eventAttendanceInfo.create({
           data: {
             startAt: new Date(attendanceInfo.startAt).toISOString(),
             endAt: new Date(attendanceInfo.endAt).toISOString(),
-            eventId: event.id
+            eventId: event.id,
+            code: `http://localhost:4000/events/attendance?code=${attendanceInfo.code}`,
+            qrcode: attendanceInfo.qrCode
           }
         })
       })
@@ -644,6 +723,17 @@ export class EventService {
     })
   }
 
+  createAttendanceInfoDto = async (eventAttendanceInfo: EventAttendanceInfoDto) => {
+    const code = Math.random().toString(36).substring(2, 15)
+    const link = `http://localhost:4000/events/attendance?code=${code}`
+    const qrCodeUrl = await qrCode.toDataURL(link)
+    return {
+      ...eventAttendanceInfo,
+      code,
+      qrCode: qrCodeUrl
+    }
+  }
+
   update = async (id: string, user: RequestUser, data: UpdateEventDto) => {
     const {
       name,
@@ -661,6 +751,8 @@ export class EventService {
       organizationsInEvent,
       organizationRepresentativeId
     } = data
+
+    const createAttendanceInfosDto = await Promise.all(eventAttendanceInfos.map(this.createAttendanceInfoDto))
 
     const event = await this.getById(user, id)
 
@@ -684,12 +776,14 @@ export class EventService {
       })
 
       await trx.eventAttendanceInfo.deleteMany({ where: { eventId: event.id } })
-      const createEventAttendancePromises = eventAttendanceInfos.map((attendanceInfo) => {
+      const createEventAttendancePromises = createAttendanceInfosDto.map((attendanceInfo) => {
         return trx.eventAttendanceInfo.create({
           data: {
             startAt: new Date(attendanceInfo.startAt).toISOString(),
             endAt: new Date(attendanceInfo.endAt).toISOString(),
-            eventId: event.id
+            eventId: event.id,
+            code: attendanceInfo.code,
+            qrcode: attendanceInfo.qrCode
           }
         })
       })
@@ -901,6 +995,89 @@ export class EventService {
           updatedBy: identityUser.id
         }
       })
+    }
+  }
+
+  attendance = async (user: RequestUser, data: AttendanceEventDto) => {
+    const eventAttendanceInfo = await this.prisma.eventAttendanceInfo.findUnique({
+      where: {
+        code: data.code
+      },
+      select: {
+        id: true,
+        code: true,
+        eventId: true,
+        event: {
+          select: {
+            latitude: true,
+            longitude: true
+          }
+        }
+      }
+    })
+
+    if (eventAttendanceInfo) {
+      const studentEventRegister = await this.prisma.studentEventRegister.findFirst({
+        where: {
+          student: {
+            identityId: user.id
+          },
+          eventRole: {
+            eventId: eventAttendanceInfo.eventId
+          },
+          status: RegisterStatus.Approved
+        }
+      })
+
+      const ListAttendanceStudent = await this.prisma.studentEventAttendance.findMany()
+
+      if (studentEventRegister) {
+        const isAttendancePeriod = ListAttendanceStudent.some((attendance) => {
+          return attendance.studentEventRegisterId.includes(studentEventRegister.id)
+        })
+
+        if (isAttendancePeriod) {
+          throw new BadRequestException({
+            message: 'Student has already attended the event',
+            error: 'Event:000005',
+            statusCode: 400
+          })
+        }
+
+        const distance = geolib.getDistance(
+          {
+            latitude: Number(data.latitude),
+            longitude: Number(data.longitude)
+          },
+          {
+            latitude: eventAttendanceInfo.event.latitude.toNumber(),
+            longitude: eventAttendanceInfo.event.longitude.toNumber()
+          }
+        )
+
+        console.log(distance)
+
+        if (distance > 200) {
+          throw new BadRequestException({
+            message: 'You need attendance in event address',
+            error: 'Event:000007',
+            statusCode: 400
+          })
+        }
+
+        await this.prisma.studentEventAttendance.create({
+          data: {
+            studentEventRegisterId: studentEventRegister.id,
+            eventAttendanceInfoId: eventAttendanceInfo.id
+          }
+        })
+      } else {
+        throw new BadRequestException({
+          message: 'Student has not registered for the event',
+          error: 'Event:000006',
+          statusCode: 400
+        })
+      }
     }
   }
 

@@ -185,6 +185,7 @@ model EventAttendanceInfo {
   startAt DateTime @default(now()) @map("start_at") @db.Timestamptz(6)
   endAt   DateTime @default(now()) @map("end_at") @db.Timestamptz(6)
   eventId String   @map("event_id") @db.Uuid
+  qrcode  String?  
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 

@@ -4,7 +4,13 @@ import { AccessTokenGuard } from 'src/guard'
 import { EventService } from './event.service'
 import { ReqUser, Roles } from '@common/decorator'
 import { RequestUser, UserRole, UUIDParam } from '@common/types'
-import { CreateEventDto, GetEventsDto, RegisterEventDto, RejectStudentRegisterEventDto } from './dto'
+import {
+  AttendanceEventDto,
+  CreateEventDto,
+  GetEventsDto,
+  RegisterEventDto,
+  RejectStudentRegisterEventDto
+} from './dto'
 import { GuestRoute } from '@common/decorator/guest.decorator'
 import { EventRegisterStudentParam } from '@modules/event-organization-contact/dto'
 
@@ -87,6 +93,15 @@ export class EventController {
   @HttpCode(HttpStatus.CREATED)
   async registerEvent(@ReqUser() user: RequestUser, @Body() registerEventDto: RegisterEventDto) {
     return await this.eventService.register(user, registerEventDto)
+  }
+
+  @Post('/events/event-attendances')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @Roles(UserRole.STUDENT)
+  @HttpCode(HttpStatus.CREATED)
+  async attendEvent(@ReqUser() user: RequestUser, @Body() attendanceEventDto: AttendanceEventDto) {
+    return await this.eventService.attendance(user, attendanceEventDto)
   }
 
   @Post('/students/:id/event-registers/:eventRegisterId/approve')
