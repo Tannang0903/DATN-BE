@@ -56,4 +56,11 @@ export class StudentController {
   async updateProfileStudent(@ReqUser() user: RequestUser, @Body() updateStudentDto: UpdateStudentDto) {
     return await this.studentService.updateProfile(user, updateStudentDto)
   }
+  @Get('students/:id/education-program')
+  // /students/${id}/education-program
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  @HttpCode(HttpStatus.OK)
+  async getEducationProgramResult(@Param() { id }: UUIDParam) {
+    return await this.studentService.getEducationProgramResult(id)
+  }
 }

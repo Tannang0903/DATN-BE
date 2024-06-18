@@ -41,6 +41,21 @@ export class EventController {
     return await this.eventService.getAllRegisteredStudent(id, params)
   }
 
+  @Get('events/:id/attendance-students')
+  @HttpCode(HttpStatus.OK)
+  async getAllAttendanceStudent(@Param() { id }: UUIDParam, @Query() params: GetEventsDto) {
+    return await this.eventService.getAllAttendanceStudent(id, params)
+  }
+
+  @Get(`/students/:id/attendance-events`)
+  @Roles(UserRole.STUDENT, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @HttpCode(HttpStatus.OK)
+  async getAllAttendanceByStudent(@Param() { id }: UUIDParam) {
+    return await this.eventService.getAllAttendanceByStudentId(id)
+  }
+
   @Post('events')
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)

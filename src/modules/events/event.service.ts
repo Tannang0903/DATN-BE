@@ -17,6 +17,7 @@ import {
 import { GetAllEventsOrderByEnum } from './event.enum'
 import * as qrCode from 'qrcode'
 import * as geolib from 'geolib'
+
 @Injectable()
 export class EventService {
   constructor(private readonly prisma: PrismaService) {}
@@ -599,6 +600,76 @@ export class EventService {
     return eventResult
   }
 
+  getAllAttendanceByStudentId = async (studentId: string) => {
+    const attendanceStudents = await this.prisma.studentEventAttendance.findMany({
+      where: {
+        studentEventRegister: {
+          student: {
+            id: studentId
+          }
+        }
+      },
+      select: {
+        eventAttendanceInfo: {
+          select: {
+            event: {
+              select: {
+                name: true,
+                organizationRepresentative: {
+                  select: {
+                    eventOrganization: {
+                      select: {
+                        name: true
+                      }
+                    }
+                  }
+                },
+                startAt: true,
+                endAt: true
+              }
+            }
+          }
+        },
+        studentEventRegister: {
+          select: {
+            eventRole: {
+              select: {
+                name: true,
+                score: true
+              }
+            }
+          }
+        },
+        attendanceAt: true
+      }
+    })
+
+    return attendanceStudents.map((attend) => {
+      return {
+        name: attend.eventAttendanceInfo.event.name,
+        representativeOrganization: {
+          name: attend.eventAttendanceInfo.event.organizationRepresentative.eventOrganization.name
+        },
+        startAt: attend.eventAttendanceInfo.event.startAt,
+        endAt: attend.eventAttendanceInfo.event.endAt,
+        role: attend.studentEventRegister.eventRole.name,
+        score: attend.studentEventRegister.eventRole.score,
+        attendanceAt: attend.attendanceAt
+      }
+    })
+  }
+
+  createAttendanceInfoDto = async (eventAttendanceInfo: EventAttendanceInfoDto) => {
+    const code = Math.random().toString(36).substring(2, 15)
+    const link = `http://localhost:4000/events/attendance?code=${code}`
+    const qrCodeUrl = await qrCode.toDataURL(link)
+    return {
+      ...eventAttendanceInfo,
+      code,
+      qrCode: qrCodeUrl
+    }
+  }
+
   create = async (user: RequestUser, data: CreateEventDto) => {
     const {
       name,
@@ -721,17 +792,6 @@ export class EventService {
 
       return event
     })
-  }
-
-  createAttendanceInfoDto = async (eventAttendanceInfo: EventAttendanceInfoDto) => {
-    const code = Math.random().toString(36).substring(2, 15)
-    const link = `http://localhost:4000/events/attendance?code=${code}`
-    const qrCodeUrl = await qrCode.toDataURL(link)
-    return {
-      ...eventAttendanceInfo,
-      code,
-      qrCode: qrCodeUrl
-    }
   }
 
   update = async (id: string, user: RequestUser, data: UpdateEventDto) => {
@@ -1054,8 +1114,6 @@ export class EventService {
             longitude: eventAttendanceInfo.event.longitude.toNumber()
           }
         )
-
-        console.log(distance)
 
         if (distance > 200) {
           throw new BadRequestException({

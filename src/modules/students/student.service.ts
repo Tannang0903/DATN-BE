@@ -5,7 +5,7 @@ import { isNotEmpty } from 'class-validator'
 import { UserService } from '@modules/users'
 import { CreateStudentDto, GetStudentsDto, UpdateProfileDto, UpdateStudentDto } from './dto'
 import { PaginatedResult, Pagination } from '@common/pagination'
-import { Prisma, Student } from '@prisma/client'
+import { Prisma, ProofStatus, Student } from '@prisma/client'
 import { getOrderBy, searchByMode } from '@common/utils'
 import { isEmpty } from 'lodash'
 import { GetAllStudentsOrderByEnum } from './student.enum'
@@ -197,6 +197,65 @@ export class StudentService {
               id: true,
               name: true
             }
+          },
+          studentEventRegister: {
+            select: {
+              studentEventAttendance: {
+                select: {
+                  eventAttendanceInfo: {
+                    select: {
+                      event: {
+                        select: {
+                          eventRoles: {
+                            select: {
+                              score: true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          proofs: {
+            select: {
+              internalProof: {
+                select: {
+                  proof: {
+                    select: {
+                      proofStatus: true
+                    }
+                  },
+                  eventRole: {
+                    select: {
+                      score: true
+                    }
+                  }
+                }
+              },
+              externalProof: {
+                select: {
+                  proof: {
+                    select: {
+                      proofStatus: true
+                    }
+                  },
+                  score: true
+                }
+              },
+              specialProof: {
+                select: {
+                  proof: {
+                    select: {
+                      proofStatus: true
+                    }
+                  },
+                  score: true
+                }
+              }
+            }
           }
         },
         take: pageSize,
@@ -205,7 +264,34 @@ export class StudentService {
       })
     ])
 
-    return Pagination.of(page, pageSize, total, students)
+    const results = students.map((student) => {
+      return {
+        ...student,
+        score:
+          student?.studentEventRegister?.reduce((total, studentRegister) => {
+            const eventScore = studentRegister?.studentEventAttendance?.eventAttendanceInfo?.event?.eventRoles?.reduce(
+              (acc, curr) => acc + (curr?.score || 0),
+              0
+            )
+            return total + eventScore
+          }, 0) +
+            student.proofs?.reduce((total, proof) => {
+              let scoreProof = 0
+              if (proof.internalProof?.proof?.proofStatus === ProofStatus.Approved) {
+                scoreProof += proof.internalProof?.eventRole?.score || 0
+              }
+              if (proof.externalProof?.proof?.proofStatus === ProofStatus.Approved) {
+                scoreProof += proof.externalProof?.score || 0
+              }
+              if (proof.specialProof?.proof?.proofStatus === ProofStatus.Approved) {
+                scoreProof += proof.specialProof?.score || 0
+              }
+              return total + scoreProof
+            }, 0) || 0
+      }
+    })
+
+    return Pagination.of(page, pageSize, total, results)
   }
 
   create = async (data: CreateStudentDto) => {
@@ -438,5 +524,151 @@ export class StudentService {
         imageUrl
       }
     })
+  }
+
+  getEducationProgramResult = async (id: string) => {
+    const student = await this.prisma.student.findUnique({
+      where: { id },
+      select: {
+        educationProgram: {
+          select: {
+            id: true,
+            name: true,
+            requiredActivityScore: true,
+            requiredCredit: true
+          }
+        },
+        proofs: {
+          select: {
+            internalProof: {
+              select: {
+                proof: {
+                  select: {
+                    proofStatus: true
+                  }
+                },
+                eventRole: {
+                  select: {
+                    score: true
+                  }
+                }
+              }
+            },
+            externalProof: {
+              select: {
+                proof: {
+                  select: {
+                    proofStatus: true
+                  }
+                },
+                score: true
+              }
+            },
+            specialProof: {
+              select: {
+                proof: {
+                  select: {
+                    proofStatus: true
+                  }
+                },
+                score: true
+              }
+            }
+          }
+        },
+        studentEventRegister: {
+          select: {
+            studentEventAttendance: {
+              select: {
+                eventAttendanceInfo: {
+                  select: {
+                    event: {
+                      select: {
+                        eventRoles: {
+                          select: {
+                            score: true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    return {
+      id: student.educationProgram.id,
+      name: student.educationProgram.name,
+      requiredActivityScore: student.educationProgram.requiredActivityScore,
+      requiredCredit: student.educationProgram.requiredCredit,
+      gainScore:
+        student?.studentEventRegister?.reduce((total, studentRegister) => {
+          const eventScore = studentRegister?.studentEventAttendance?.eventAttendanceInfo?.event?.eventRoles?.reduce(
+            (acc, curr) => acc + (curr?.score || 0),
+            0
+          )
+          return total + eventScore
+        }, 0) +
+          student?.proofs?.reduce((total, proof) => {
+            let scoreProof = 0
+            if (proof.internalProof?.proof?.proofStatus === ProofStatus.Approved) {
+              scoreProof += proof.internalProof?.eventRole?.score || 0
+            }
+            if (proof.externalProof?.proof?.proofStatus === ProofStatus.Approved) {
+              scoreProof += proof.externalProof?.score || 0
+            }
+            if (proof.specialProof?.proof?.proofStatus === ProofStatus.Approved) {
+              scoreProof += proof.specialProof?.score || 0
+            }
+            return total + scoreProof
+          }, 0) || 0,
+      eventScore:
+        student?.studentEventRegister?.reduce((total, studentRegister) => {
+          const eventScore = studentRegister?.studentEventAttendance?.eventAttendanceInfo?.event?.eventRoles?.reduce(
+            (acc, curr) => acc + (curr?.score || 0),
+            0
+          )
+          return total + eventScore
+        }, 0) || 0,
+      proofScore: student.proofs?.reduce((total, proof) => {
+        let scoreProof = 0
+        if (proof.internalProof?.proof?.proofStatus === ProofStatus.Approved) {
+          scoreProof += proof.internalProof?.eventRole?.score || 0
+        }
+        if (proof.externalProof?.proof?.proofStatus === ProofStatus.Approved) {
+          scoreProof += proof.externalProof?.score || 0
+        }
+        if (proof.specialProof?.proof?.proofStatus === ProofStatus.Approved) {
+          scoreProof += proof.specialProof?.score || 0
+        }
+        return total + scoreProof
+      }, 0),
+      numberOfEvents:
+        student.studentEventRegister.reduce(
+          (acc, studentEvent) =>
+            acc + studentEvent.studentEventAttendance?.eventAttendanceInfo?.event?.eventRoles?.length,
+          0
+        ) || 0,
+      numberOfProofs: student.proofs?.length,
+      numberOfApprovedProofs: student.proofs?.reduce((total, proof) => {
+        let count = 0
+        if (proof.internalProof?.proof?.proofStatus === ProofStatus.Approved) {
+          count += 1
+        }
+        if (proof.externalProof?.proof?.proofStatus === ProofStatus.Approved) {
+          count += 1
+        }
+        if (proof.specialProof?.proof?.proofStatus === ProofStatus.Approved) {
+          count += 1
+        }
+        return total + count
+      }, 0)
+    }
+
+    return
   }
 }
