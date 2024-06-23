@@ -1,10 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from 'src/database'
-import { ProofExternalDto, ProofInternalDto, ProofSpecialDto, RejectProofDto } from './dto'
+import { GetProofsDto, ProofExternalDto, ProofInternalDto, ProofSpecialDto, RejectProofDto } from './dto'
 import { EventService } from '@modules/events'
 import { getOrderBy, Pagination, RequestUser, searchByMode } from 'src/common'
 import { Prisma, Proof, ProofStatus, ProofType } from '@prisma/client'
-import { GetProofsDto } from './dto/get-proof.dto'
 import { isEmpty } from 'lodash'
 import { GetAllProofsOrderByEnum } from './proof.enum'
 

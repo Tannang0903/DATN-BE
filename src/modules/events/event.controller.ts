@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, U
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { AccessTokenGuard } from 'src/guard'
 import { EventService } from './event.service'
-import { ReqUser, Roles } from '@common/decorator'
+import { GuestRoute, ReqUser, Roles } from '@common/decorator'
 import { RequestUser, UserRole, UUIDParam } from '@common/types'
 import {
   AttendanceEventDto,
@@ -11,7 +11,6 @@ import {
   RegisterEventDto,
   RejectStudentRegisterEventDto
 } from './dto'
-import { GuestRoute } from '@common/decorator/guest.decorator'
 import { EventRegisterStudentParam } from '@modules/event-organization-contact/dto'
 
 @Controller()

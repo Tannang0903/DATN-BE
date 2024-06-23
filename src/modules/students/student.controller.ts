@@ -4,9 +4,7 @@ import { AccessTokenGuard } from 'src/guard'
 import { StudentService } from './student.service'
 import { ReqUser, Roles } from '@common/decorator'
 import { RequestUser, UserRole, UUIDParam } from '@common/types'
-import { CreateStudentDto } from './dto/create-student.dto'
-import { GetStudentsDto } from './dto'
-import { UpdateStudentDto } from './dto/update-student.dto'
+import { CreateStudentDto, GetStudentsDto, UpdateStudentDto } from './dto'
 
 @Controller()
 @ApiTags('Student')

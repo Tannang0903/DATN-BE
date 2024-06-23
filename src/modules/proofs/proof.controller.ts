@@ -4,8 +4,7 @@ import { AccessTokenGuard } from 'src/guard'
 import { ProofService } from './proof.service'
 import { ReqUser, Roles } from '@common/decorator'
 import { RequestUser, UserRole, UUIDParam } from '@common/types'
-import { ProofExternalDto, ProofInternalDto, ProofSpecialDto, RejectProofDto } from './dto'
-import { GetProofsDto } from './dto/get-proof.dto'
+import { GetProofsDto, ProofExternalDto, ProofInternalDto, ProofSpecialDto, RejectProofDto } from './dto'
 
 @Controller()
 @ApiTags('Proof')

@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from 'src/database/services'
-import { CreateRoleDto } from './dto'
+import { CreateRoleDto, UpdateRoleDto } from './dto'
 import { IdentityRole } from '@prisma/client'
-import { UpdateRoleDto } from './dto/update-role.dto'
 import { isEmpty } from 'lodash'
 
 @Injectable()

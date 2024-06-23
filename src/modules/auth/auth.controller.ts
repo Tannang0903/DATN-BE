@@ -1,11 +1,10 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common'
-import { AuthService } from './auth.service'
 import { ChangePasswordDto, ForgotPasswordDto, LoginCredentialDto, ResetPasswordDto } from './dto'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { AccessTokenGuard, RefreshTokenGuard } from 'src/guard'
-import { ReqUser } from 'src/common/decorator'
-import { RequestUser } from 'src/common'
+import { RequestUser, ReqUser } from 'src/common'
 import { Request } from 'express'
+import { AuthService } from './auth.service'
 
 @ApiTags('Auth')
 @Controller('auth')

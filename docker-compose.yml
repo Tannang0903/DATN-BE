@@ -1,10 +1,10 @@
 version: '3'
 services:
   app: # Comment this field if in local development
-    image: ${REGISTRY}:latest
+    image: tannang/servesync:latest
     env_file: server.env
     ports:
-      - '80:${APP_PORT}'
+      - '80:5000'
     depends_on:
       - postgres
   postgres:
