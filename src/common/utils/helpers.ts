@@ -43,6 +43,12 @@ export const getCurrentEventStatus = (
     eventRegistrationInfos.some((registrationInfo) => registrationInfo.startAt <= now)
   ) {
     return EventStatus.Expired
+  } else if (status === EventStatus.Cancelled) {
+    return EventStatus.Cancelled
+  } else if (status === EventStatus.Rejected) {
+    return EventStatus.Rejected
+  } else if (status === EventStatus.Pending) {
+    return EventStatus.Pending
   }
 
   return status

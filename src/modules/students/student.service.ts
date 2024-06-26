@@ -575,22 +575,24 @@ export class StudentService {
               }
             }
           }
-        },
+        }
+      }
+    })
+
+    const studentAttendances = await this.prisma.studentEventAttendance.findMany({
+      where: {
         studentEventRegister: {
+          studentId: id
+        }
+      },
+      select: {
+        eventAttendanceInfo: {
           select: {
-            studentEventAttendance: {
+            event: {
               select: {
-                eventAttendanceInfo: {
+                eventRoles: {
                   select: {
-                    event: {
-                      select: {
-                        eventRoles: {
-                          select: {
-                            score: true
-                          }
-                        }
-                      }
-                    }
+                    score: true
                   }
                 }
               }
@@ -601,40 +603,40 @@ export class StudentService {
     })
 
     return {
-      id: student.educationProgram.id,
-      name: student.educationProgram.name,
-      requiredActivityScore: student.educationProgram.requiredActivityScore,
-      requiredCredit: student.educationProgram.requiredCredit,
+      id: student.educationProgram?.id,
+      name: student.educationProgram?.name,
+      requiredActivityScore: student.educationProgram?.requiredActivityScore,
+      requiredCredit: student.educationProgram?.requiredCredit,
       gainScore:
-        student?.studentEventRegister?.reduce((total, studentRegister) => {
-          const eventScore = studentRegister?.studentEventAttendance?.eventAttendanceInfo?.event?.eventRoles?.reduce(
-            (acc, curr) => acc + (curr?.score || 0),
-            0
-          )
-          return total + eventScore
-        }, 0) +
-          student?.proofs?.reduce((total, proof) => {
-            let scoreProof = 0
-            if (proof.internalProof?.proof?.proofStatus === ProofStatus.Approved) {
-              scoreProof += proof.internalProof?.eventRole?.score || 0
-            }
-            if (proof.externalProof?.proof?.proofStatus === ProofStatus.Approved) {
-              scoreProof += proof.externalProof?.score || 0
-            }
-            if (proof.specialProof?.proof?.proofStatus === ProofStatus.Approved) {
-              scoreProof += proof.specialProof?.score || 0
-            }
-            return total + scoreProof
-          }, 0) || 0,
-      eventScore:
-        student?.studentEventRegister?.reduce((total, studentRegister) => {
-          const eventScore = studentRegister?.studentEventAttendance?.eventAttendanceInfo?.event?.eventRoles?.reduce(
-            (acc, curr) => acc + (curr?.score || 0),
-            0
-          )
-          return total + eventScore
-        }, 0) || 0,
-      proofScore: student.proofs?.reduce((total, proof) => {
+        studentAttendances.reduce(
+          (acc, studentAttendance) =>
+            acc +
+            studentAttendance?.eventAttendanceInfo?.event?.eventRoles?.reduce(
+              (acc, curr) => acc + (curr?.score || 0),
+              0
+            ),
+          0
+        ) +
+        student.proofs.reduce((total, proof) => {
+          let scoreProof = 0
+          if (proof.internalProof?.proof?.proofStatus === ProofStatus.Approved) {
+            scoreProof += proof.internalProof?.eventRole?.score || 0
+          }
+          if (proof.externalProof?.proof?.proofStatus === ProofStatus.Approved) {
+            scoreProof += proof.externalProof?.score || 0
+          }
+          if (proof.specialProof?.proof?.proofStatus === ProofStatus.Approved) {
+            scoreProof += proof.specialProof?.score || 0
+          }
+          return total + scoreProof
+        }, 0),
+      eventScore: studentAttendances.reduce(
+        (acc, studentAttendance) =>
+          acc +
+          studentAttendance?.eventAttendanceInfo?.event?.eventRoles?.reduce((acc, curr) => acc + (curr?.score || 0), 0),
+        0
+      ),
+      proofScore: student.proofs.reduce((total, proof) => {
         let scoreProof = 0
         if (proof.internalProof?.proof?.proofStatus === ProofStatus.Approved) {
           scoreProof += proof.internalProof?.eventRole?.score || 0
@@ -647,14 +649,9 @@ export class StudentService {
         }
         return total + scoreProof
       }, 0),
-      numberOfEvents:
-        student.studentEventRegister.reduce(
-          (acc, studentEvent) =>
-            acc + studentEvent.studentEventAttendance?.eventAttendanceInfo?.event?.eventRoles?.length,
-          0
-        ) || 0,
-      numberOfProofs: student.proofs?.length,
-      numberOfApprovedProofs: student.proofs?.reduce((total, proof) => {
+      numberOfEvents: studentAttendances.length,
+      numberOfProofs: student.proofs.length,
+      numberOfApprovedProofs: student.proofs.reduce((total, proof) => {
         let count = 0
         if (proof.internalProof?.proof?.proofStatus === ProofStatus.Approved) {
           count += 1
@@ -668,7 +665,5 @@ export class StudentService {
         return total + count
       }, 0)
     }
-
-    return
   }
 }

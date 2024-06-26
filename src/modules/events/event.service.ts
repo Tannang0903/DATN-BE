@@ -11,6 +11,7 @@ import {
   GetEventsDto,
   RegisterEventDto,
   EventAttendanceInfoDto,
+  EventRegistrationInfoDto,
   RejectStudentRegisterEventDto,
   UpdateEventDto
 } from './dto'
@@ -23,7 +24,7 @@ export class EventService {
   constructor(private readonly prisma: PrismaService) {}
 
   getAll = async (user: RequestUser, params: GetEventsDto) => {
-    const { startDate, endDate, eventType, eventStatus, search, sorting } = params
+    const { startDate, endDate, eventType, eventStatus, search, sorting, isPaging } = params
 
     const pageSize = params.pageSize ? params.pageSize : 10
     const page = params.page ? params.page : 1
@@ -48,20 +49,28 @@ export class EventService {
 
     if (startDate && !endDate) {
       whereConditions.push({
-        startAt: startDate
+        startAt: {
+          gte: new Date(startDate)
+        }
       })
     } else if (!startDate && endDate) {
       whereConditions.push({
-        endAt: endDate
+        endAt: {
+          lte: new Date(endDate)
+        }
       })
     } else if (startDate && endDate) {
       whereConditions.push({
         AND: [
           {
-            startAt: startDate
+            startAt: {
+              gte: new Date(startDate)
+            }
           },
           {
-            endAt: endDate
+            endAt: {
+              lte: new Date(endDate)
+            }
           }
         ]
       })
@@ -215,12 +224,12 @@ export class EventService {
       ? listEvents.filter((event) => event.calculatedStatus === eventStatus)
       : listEvents
 
-    const paginatedList = filteredByStatusListEvents.slice(
-      Number((page - 1) * pageSize),
-      Number((page - 1) * pageSize) + pageSize
-    )
+    const result =
+      isPaging === false
+        ? filteredByStatusListEvents
+        : filteredByStatusListEvents.slice(Number((page - 1) * pageSize), Number((page - 1) * pageSize) + pageSize)
 
-    return Pagination.of(page, pageSize, total, paginatedList)
+    return Pagination.of(page, pageSize, total, result)
   }
 
   getAllRegisteredStudent = async (eventId: string, params: GetEventsDto) => {
@@ -670,6 +679,76 @@ export class EventService {
     }
   }
 
+  validateAttendanceInfo = (eventAttendanceInfos: EventAttendanceInfoDto[], startAt: string, endAt: string) => {
+    // Event attendance times are overlapping
+    for (let i = 0; i < eventAttendanceInfos.length; i++) {
+      for (let j = i + 1; j < eventAttendanceInfos.length; j++) {
+        const startA = new Date(eventAttendanceInfos[i].startAt).getTime()
+        const endA = new Date(eventAttendanceInfos[i].endAt).getTime()
+        const startB = new Date(eventAttendanceInfos[j].startAt).getTime()
+        const endB = new Date(eventAttendanceInfos[j].endAt).getTime()
+
+        if (startA < endB && startB < endA) {
+          throw new BadRequestException({
+            message: 'Event attendance times are overlapping',
+            error: 'EventAttendance:000001',
+            statusCode: 400
+          })
+        }
+      }
+    }
+
+    // Attendance times must be within event times
+    const eventStartAt = new Date(startAt).getTime()
+    const eventEndAt = new Date(endAt).getTime()
+
+    eventAttendanceInfos.every((info) => {
+      const attendanceStartAt = new Date(info.startAt).getTime()
+      const attendanceEndAt = new Date(info.endAt).getTime()
+      if (!(attendanceStartAt >= eventStartAt && attendanceEndAt <= eventEndAt)) {
+        throw new BadRequestException({
+          message: 'Attendance times must be within event times',
+          error: 'EventAttendance:000002',
+          statusCode: 400
+        })
+      }
+    })
+  }
+
+  validateRegistrationInfo = (eventRegistrationInfos: EventRegistrationInfoDto[], startAt: string) => {
+    // Event registration times are overlapping
+    for (let i = 0; i < eventRegistrationInfos.length; i++) {
+      for (let j = i + 1; j < eventRegistrationInfos.length; j++) {
+        const startA = new Date(eventRegistrationInfos[i].startAt).getTime()
+        const endA = new Date(eventRegistrationInfos[i].endAt).getTime()
+        const startB = new Date(eventRegistrationInfos[j].startAt).getTime()
+        const endB = new Date(eventRegistrationInfos[j].endAt).getTime()
+
+        if (startA < endB && startB < endA) {
+          throw new BadRequestException({
+            message: 'Event registration times are overlapping',
+            error: 'EventRegistration:000001',
+            statusCode: 400
+          })
+        }
+      }
+    }
+
+    // Registration times must be before event start time
+    const eventStartAt = new Date(startAt).getTime()
+
+    eventRegistrationInfos.forEach((info) => {
+      const registrationEndAt = new Date(info.endAt).getTime()
+      if (!(registrationEndAt <= eventStartAt)) {
+        throw new BadRequestException({
+          message: 'Registration times must end before event start time',
+          error: 'EventRegistration:000002',
+          statusCode: 400
+        })
+      }
+    })
+  }
+
   create = async (user: RequestUser, data: CreateEventDto) => {
     const {
       name,
@@ -687,6 +766,10 @@ export class EventService {
       organizationsInEvent,
       organizationRepresentativeId
     } = data
+
+    this.validateAttendanceInfo(eventAttendanceInfos, startAt, endAt)
+
+    this.validateRegistrationInfo(eventRegistrationInfos, startAt)
 
     const createAttendanceInfosDto = await Promise.all(eventAttendanceInfos.map(this.createAttendanceInfoDto))
 
@@ -811,6 +894,10 @@ export class EventService {
       organizationsInEvent,
       organizationRepresentativeId
     } = data
+
+    this.validateAttendanceInfo(eventAttendanceInfos, startAt, endAt)
+
+    this.validateRegistrationInfo(eventRegistrationInfos, startAt)
 
     const createAttendanceInfosDto = await Promise.all(eventAttendanceInfos.map(this.createAttendanceInfoDto))
 
@@ -988,7 +1075,7 @@ export class EventService {
     if (!isRegistrationPeriod) {
       throw new BadRequestException({
         message: 'Registration period is over',
-        error: 'EventRole:000003',
+        error: 'Event:000002',
         statusCode: 400
       })
     }
@@ -1020,7 +1107,7 @@ export class EventService {
     if (studentRegisteredEvent) {
       throw new BadRequestException({
         message: 'Student has already registered for an event',
-        error: 'EventRole:000004',
+        error: 'Student:000006',
         statusCode: 400
       })
     }
@@ -1076,6 +1163,33 @@ export class EventService {
       }
     })
 
+    const listAttendancesPeriod = await this.prisma.eventAttendanceInfo.findMany({
+      where: {
+        eventId: eventAttendanceInfo.eventId
+      },
+      select: {
+        startAt: true,
+        endAt: true
+      }
+    })
+
+    const currentTime = new Date()
+
+    const isAttendancePeriod = listAttendancesPeriod.some((info) => {
+      const startTime = new Date(info.startAt)
+      const endTime = new Date(info.endAt)
+
+      return currentTime >= startTime && currentTime <= endTime
+    })
+
+    if (!isAttendancePeriod) {
+      throw new BadRequestException({
+        message: 'Attendance period is over',
+        error: 'Event:000003',
+        statusCode: 400
+      })
+    }
+
     if (eventAttendanceInfo) {
       const studentEventRegister = await this.prisma.studentEventRegister.findFirst({
         where: {
@@ -1099,7 +1213,7 @@ export class EventService {
         if (isAttendancePeriod) {
           throw new BadRequestException({
             message: 'Student has already attended the event',
-            error: 'Event:000005',
+            error: 'Student:000007',
             statusCode: 400
           })
         }
@@ -1118,7 +1232,7 @@ export class EventService {
         if (distance > 200) {
           throw new BadRequestException({
             message: 'You need attendance in event address',
-            error: 'Event:000007',
+            error: 'Student:000008',
             statusCode: 400
           })
         }
@@ -1132,7 +1246,7 @@ export class EventService {
       } else {
         throw new BadRequestException({
           message: 'Student has not registered for the event',
-          error: 'Event:000006',
+          error: 'Student:000009',
           statusCode: 400
         })
       }

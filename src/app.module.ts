@@ -17,6 +17,7 @@ import { EventActivityModule } from '@modules/event-activity'
 import { EventOrganizationModule } from '@modules/event-organization'
 import { EventOrganizationContactModule } from '@modules/event-organization-contact'
 import { ProofModule } from '@modules/proofs'
+import { StatisticModule } from '@modules/statistic'
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ProofModule } from '@modules/proofs'
     EducationProgramModule,
     StudentModule,
     CloudinaryModule,
+    StatisticModule,
     EventModule,
     EventCategoryModule,
     EventActivityModule,

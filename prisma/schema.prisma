@@ -252,7 +252,7 @@ model OrganizationInEvent {
   role           String @db.Text
 
   event               Event             @relation("event_organizations", fields: [eventId], references: [id], onDelete: Cascade)
-  eventOrganization   EventOrganization @relation(fields: [organizationId], references: [id])
+  eventOrganization   EventOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   eventRepresentative Event?            @relation("event_organizations_representative")
 
   organizationRepresentativesInEvent OrganizationRepresentativeInEvent[]
@@ -266,7 +266,7 @@ model OrganizationRepresentativeInEvent {
   role                  String @db.Text
 
   organizationInEvent      OrganizationInEvent      @relation(fields: [organizationInEventId], references: [id], onDelete: Cascade)
-  eventOrganizationContact EventOrganizationContact @relation(fields: [organizationContactId], references: [id])
+  eventOrganizationContact EventOrganizationContact @relation(fields: [organizationContactId], references: [id], onDelete: Cascade)
 
   @@id([organizationInEventId, organizationContactId])
 }
@@ -277,8 +277,8 @@ model StudentEventAttendance {
   studentEventRegisterId String    @unique @map("student_event_register_id") @db.Uuid
   attendanceAt           DateTime? @default(now()) @map("attendance_at") @db.Timestamptz(6)
 
-  eventAttendanceInfo  EventAttendanceInfo  @relation(fields: [eventAttendanceInfoId], references: [id])
-  studentEventRegister StudentEventRegister @relation(fields: [studentEventRegisterId], references: [id])
+  eventAttendanceInfo  EventAttendanceInfo  @relation(fields: [eventAttendanceInfoId], references: [id], onDelete: Cascade)
+  studentEventRegister StudentEventRegister @relation(fields: [studentEventRegisterId], references: [id], onDelete: Cascade)
 }
 
 model StudentEventRegister {
@@ -293,8 +293,8 @@ model StudentEventRegister {
   updatedAt    DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6) @updatedAt
   updatedBy    String?        @map("updated_by") @db.Uuid
 
-  student   Student   @relation(fields: [studentId], references: [id])
-  eventRole EventRole @relation(fields: [eventRoleId], references: [id])
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  eventRole EventRole @relation(fields: [eventRoleId], references: [id], onDelete: Cascade)
 
   studentEventAttendance StudentEventAttendance?
 }

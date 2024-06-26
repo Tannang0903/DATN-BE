@@ -23,6 +23,14 @@ export class EventOrganizationService {
     })
   }
 
+  getByName = async (name: string) => {
+    return this.prisma.eventOrganization.findFirst({
+      where: {
+        name: name
+      }
+    })
+  }
+
   getById = async (id: string) => {
     const eventOrganization = await this.prisma.eventOrganization.findUnique({
       where: { id: id },
@@ -137,6 +145,16 @@ export class EventOrganizationService {
       throw new BadRequestException({
         message: 'Event Organization with the given email has already existed',
         error: 'EventOrganization:000002',
+        statusCode: 400
+      })
+    }
+
+    const existedName = await this.getByName(name)
+
+    if (isNotEmpty(existedName)) {
+      throw new BadRequestException({
+        message: 'Event Organization with the given name has already existed',
+        error: 'EventOrganization:000003',
         statusCode: 400
       })
     }
