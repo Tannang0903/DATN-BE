@@ -8,6 +8,7 @@ import { PaginatedResult, Pagination } from '@common/pagination'
 import { getOrderBy, searchByMode } from '@common/utils'
 import { UserService } from '@modules/users'
 import { RoleService } from '@modules/roles'
+import { RequestUser } from '@common/types'
 
 @Injectable()
 export class EventOrganizationService {
@@ -71,7 +72,10 @@ export class EventOrganizationService {
     return eventOrganization
   }
 
-  getAll = async (params: GetEventOrganizationsDto): Promise<PaginatedResult<EventOrganization[]>> => {
+  getAll = async (
+    user: RequestUser,
+    params: GetEventOrganizationsDto
+  ): Promise<PaginatedResult<EventOrganization[]>> => {
     const { search, sorting } = params
 
     const pageSize = params.pageSize ? params.pageSize : 10
@@ -89,6 +93,12 @@ export class EventOrganizationService {
             email: searchByMode(search)
           }
         ]
+      })
+    }
+
+    if (!user.roles.includes('ADMIN')) {
+      whereConditions.push({
+        email: user.email
       })
     }
 

@@ -2,8 +2,8 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, 
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { AccessTokenGuard } from 'src/guard'
 import { EventOrganizationService } from './event-organization.service'
-import { Roles } from '@common/decorator'
-import { UserRole, UUIDParam } from '@common/types'
+import { ReqUser, Roles } from '@common/decorator'
+import { RequestUser, UserRole, UUIDParam } from '@common/types'
 import { CreateEventOrganizationDto, GetEventOrganizationsDto, UpdateEventOrganizationDto } from './dto'
 
 @Controller()
@@ -23,8 +23,8 @@ export class EventOrganizationController {
   @Get('event-organizations')
   @Roles(UserRole.ADMIN, UserRole.ORGANIZATION)
   @HttpCode(HttpStatus.OK)
-  async getAllEventOrganizations(@Query() params: GetEventOrganizationsDto) {
-    return await this.eventOrganizationService.getAll(params)
+  async getAllEventOrganizations(@ReqUser() user: RequestUser, @Query() params: GetEventOrganizationsDto) {
+    return await this.eventOrganizationService.getAll(user, params)
   }
 
   @Post('event-organizations')

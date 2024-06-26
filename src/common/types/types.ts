@@ -9,6 +9,7 @@ export type RequestUser = {
   id: string
   name: string
   session: string
+  email: string
   roles: string[]
 }
 
