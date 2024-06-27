@@ -670,7 +670,7 @@ export class EventService {
 
   createAttendanceInfoDto = async (eventAttendanceInfo: EventAttendanceInfoDto) => {
     const code = Math.random().toString(36).substring(2, 15)
-    const link = `http://localhost:4000/events/attendance?code=${code}`
+    const link = `http://52.163.115.250:4173/events/attendance?code=${code}`
     const qrCodeUrl = await qrCode.toDataURL(link)
     return {
       ...eventAttendanceInfo,
